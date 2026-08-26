@@ -327,7 +327,7 @@ function emitComponent(el, ctx) {
   const i = ctx.blocks.length;
   ctx.html += `<!--#${i}-->`;
   ctx.blocks.push(
-    `{ k: 'comp', v: () => ${el.tag}, props: [${props.join(", ")}], events: [${events.join(", ")}], cls: ${cls}, content: ${content} }`
+    `{ k: 'comp', name: ${JSON.stringify(el.tag)}, v: () => ${el.tag}, props: [${props.join(", ")}], events: [${events.join(", ")}], cls: ${cls}, content: ${content} }`
   );
 }
 function fn(expr, ctx, statement = false) {

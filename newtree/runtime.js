@@ -1,6 +1,7 @@
 import { effect } from "./reactive.js";
 import { states as globalStates, createScope } from "./states.js";
 import { loadAsset, loadAssetRaw } from "virtual:core/assets";
+import { mountBehavior } from "./behaviors.js";
 const EMPTY = Object.freeze({});
 const AS_PROPERTY = /* @__PURE__ */ new Set(["value", "checked", "selected", "indeterminate"]);
 function view(def) {
@@ -313,7 +314,14 @@ function component(b, anchor, scope, params, props, effects, states) {
       }));
     }
   }
-  return inst;
+  const cleanup = root ? mountBehavior(b.name, root, { states, params, props }) : null;
+  return {
+    nodes: inst.nodes,
+    destroy() {
+      cleanup?.();
+      inst.destroy();
+    }
+  };
 }
 function setAttribute(el, name, value) {
   if (AS_PROPERTY.has(name) && name in el) {

@@ -6,9 +6,11 @@ const ROUTES = "virtual:core/routes";
 const STATES = "virtual:core/states";
 const ASSETS = "virtual:core/assets";
 const ENV = "virtual:core/env";
+const BEHAVIORS = "virtual:core/behaviors";
 function core(options = {}) {
   const views = options.views ?? "src/views";
   const states = options.states ?? "src/js/states";
+  const behaviors = options.behaviors ?? "src/js/components";
   const viewExt = options.viewExtension ?? ".view";
   const runtime = options.runtime ?? "/src/core/runtime.js";
   const assets = options.assets ?? { icons: "src/icons" };
@@ -101,7 +103,7 @@ function core(options = {}) {
   const rel = (file) => "/" + path.relative(root, file).split(path.sep).join("/");
   function resolveComponent(name) {
     if (!index?.has(name)) index = scan();
-    const file = index.get(name);
+    const file = index.get(name) ?? index.get(name.toLowerCase());
     return file ? rel(file) : null;
   }
   return {
@@ -119,7 +121,7 @@ function core(options = {}) {
       };
     },
     resolveId(id) {
-      if (id === ROUTES || id === STATES || id === ASSETS || id === ENV) return "\0" + id;
+      if (id === ROUTES || id === STATES || id === ASSETS || id === ENV || id === BEHAVIORS) return "\0" + id;
     },
     load(id) {
       if (id === "\0" + ROUTES) {
@@ -142,6 +144,12 @@ function core(options = {}) {
         return [
           `const mods = import.meta.glob(${JSON.stringify(`/${states}/*.js`)}, { eager: true })`,
           `export default mods`
+        ].join("\n");
+      }
+      if (id === "\0" + BEHAVIORS) {
+        return [
+          `const modules = import.meta.glob(${JSON.stringify(`/${behaviors}/**/*.js`)}, { eager: true })`,
+          "export default modules"
         ].join("\n");
       }
       if (id === "\0" + ASSETS) {
