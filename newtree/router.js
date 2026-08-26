@@ -82,10 +82,14 @@ function resolveError(status) {
   return null;
 }
 function swap(inst) {
-  current?.destroy();
-  current = inst;
-  if (outlet) outlet.before(...inst.nodes);
-  else root.replaceChildren(...inst.nodes);
+  const replace = () => {
+    current?.destroy();
+    current = inst;
+    if (outlet) outlet.before(...inst.nodes);
+    else root.replaceChildren(...inst.nodes);
+  };
+  if (document.startViewTransition) document.startViewTransition(replace);
+  else replace();
 }
 const plain = (message) => ({ nodes: [document.createTextNode(message)], destroy() {
 } });
