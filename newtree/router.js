@@ -1,1 +1,110 @@
-import{states as n}from"./states.js";let l=null,y=[],f=new Map,c=null,g=null,s=0,d=!1;const h=new Set;function K(e){return h.add(e),()=>h.delete(e)}function L(e,r){l=e,y=r.routes,f=new Map(Object.entries(r.errors));const t=r.shell;return addEventListener("popstate",p),document.addEventListener("click",b),Promise.resolve(t?.()).then(o=>(o&&E(o.default),p()))}function x(e,{replace:r=!1}={}){const t=new URL(e,location.href),o=t.pathname+t.search===location.pathname+location.search;return o&&!d?Promise.resolve():(o||history[r?"replaceState":"pushState"]({},"",t),p())}function P(e=500,r="",t=null){return m(++s,e,r,t)}function E(e){const r=e.create({},{});l.replaceChildren(...r.nodes);const t=l.querySelector("slot");t&&(c=document.createComment("page"),t.replaceWith(c))}async function p(){const e=++s,r=location.pathname,t=y.find(o=>o.re.test(r));if(n.route.path=r,n.route.params=t?$(t,r):{},!t)return m(e,404,`No view for ${r}`);try{const o=await t.load();if(e!==s)return;i(o.default.create({},n.route.params)),d=!1,h.forEach(a=>a({path:r,params:n.route.params,root:l,outlet:c})),scrollTo(0,0)}catch(o){return console.error(o),m(e,500,o?.message??String(o))}}async function m(e,r,t,o=null){n.error.status=r,n.error.message=t,n.error.details=o,d=!0;const a=S(r);if(!a)return i(w(`${r} \u2014 ${t}`));try{const u=await a();if(e!==s)return;i(u.default.create({},{})),scrollTo(0,0)}catch(u){console.error(u),i(w(`${r} \u2014 ${t}`))}}function S(e){const r=[String(e),`${Math.floor(e/100)}0x`,"error"];for(const t of r)if(f.has(t))return f.get(t);return null}function i(e){g?.destroy(),g=e,c?c.before(...e.nodes):l.replaceChildren(...e.nodes)}const w=e=>({nodes:[document.createTextNode(e)],destroy(){}});function b(e){if(e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;const r=e.target.closest?.("a[href]");if(!r||r.target||r.hasAttribute("download")||r.getAttribute("rel")==="external")return;const t=new URL(r.href,location.href);t.origin===location.origin&&(e.preventDefault(),x(t.pathname+t.search+t.hash))}function $(e,r){const t=e.re.exec(r)??[];return Object.fromEntries(e.keys.map((o,a)=>[o,decodeURIComponent(t[a+1]??"")]))}export{P as fail,x as navigate,K as onRoute,L as start};
+import { states } from "./states.js";
+import { emitRoute } from "./lifecycle.js";
+let root = null;
+let routes = [];
+let errors = /* @__PURE__ */ new Map();
+let outlet = null;
+let current = null;
+let token = 0;
+let onErrorPage = false;
+function start(el, manifest) {
+  root = el;
+  routes = manifest.routes;
+  errors = new Map(Object.entries(manifest.errors));
+  const shell = manifest.shell;
+  addEventListener("popstate", render);
+  document.addEventListener("click", intercept);
+  return Promise.resolve(shell?.()).then((mod) => {
+    if (mod) useShell(mod.default);
+    return render();
+  });
+}
+function navigate(to, { replace = false } = {}) {
+  const url = new URL(to, location.href);
+  const here = url.pathname + url.search === location.pathname + location.search;
+  if (here && !onErrorPage) return Promise.resolve();
+  if (!here) history[replace ? "replaceState" : "pushState"]({}, "", url);
+  return render();
+}
+function fail(status = 500, message = "", details = null) {
+  return showError(++token, status, message, details);
+}
+function useShell(v) {
+  const inst = v.create({}, {});
+  root.replaceChildren(...inst.nodes);
+  const slot = root.querySelector("slot");
+  if (slot) {
+    outlet = document.createComment("page");
+    slot.replaceWith(outlet);
+  }
+}
+async function render() {
+  const mine = ++token;
+  const path = location.pathname;
+  const hit = routes.find((r) => r.re.test(path));
+  states.route.path = path;
+  states.route.params = hit ? params(hit, path) : {};
+  if (!hit) return showError(mine, 404, `No view for ${path}`);
+  try {
+    const mod = await hit.load();
+    if (mine !== token) return;
+    swap(mod.default.create({}, states.route.params));
+    onErrorPage = false;
+    emitRoute({ path, params: states.route.params, root, outlet });
+    scrollTo(0, 0);
+  } catch (e) {
+    console.error(e);
+    return showError(mine, 500, e?.message ?? String(e));
+  }
+}
+async function showError(mine, status, message, details = null) {
+  states.error.status = status;
+  states.error.message = message;
+  states.error.details = details;
+  onErrorPage = true;
+  const load = resolveError(status);
+  if (!load) return swap(plain(`${status} \u2014 ${message}`));
+  try {
+    const mod = await load();
+    if (mine !== token) return;
+    swap(mod.default.create({}, {}));
+    scrollTo(0, 0);
+  } catch (e) {
+    console.error(e);
+    swap(plain(`${status} \u2014 ${message}`));
+  }
+}
+function resolveError(status) {
+  const candidates = [String(status), `${Math.floor(status / 100)}0x`, "error"];
+  for (const name of candidates) {
+    if (errors.has(name)) return errors.get(name);
+  }
+  return null;
+}
+function swap(inst) {
+  current?.destroy();
+  current = inst;
+  if (outlet) outlet.before(...inst.nodes);
+  else root.replaceChildren(...inst.nodes);
+}
+const plain = (message) => ({ nodes: [document.createTextNode(message)], destroy() {
+} });
+function intercept(event) {
+  if (event.defaultPrevented || event.button !== 0) return;
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  const a = event.target.closest?.("a[href]");
+  if (!a || a.target || a.hasAttribute("download") || a.getAttribute("rel") === "external") return;
+  const url = new URL(a.href, location.href);
+  if (url.origin !== location.origin) return;
+  event.preventDefault();
+  navigate(url.pathname + url.search + url.hash);
+}
+function params(route, path) {
+  const match = route.re.exec(path) ?? [];
+  return Object.fromEntries(route.keys.map((key, i) => [key, decodeURIComponent(match[i + 1] ?? "")]));
+}
+export {
+  fail,
+  navigate,
+  start
+};

@@ -1,1 +1,26 @@
-import s from"virtual:core/routes";import n from"virtual:core/states";import{registerStates as i,states as a,defineState as c}from"./states.js";import{start as f,navigate as l,fail as m,onRoute as p}from"./router.js";i(n);import{reactive as E,effect as q}from"./reactive.js";import{effect as M}from"./reactive.js";const r=new Set;let o=0;function h(t){return r.add(t),()=>r.delete(t)}addEventListener("scroll",()=>{o||(o=requestAnimationFrame(()=>{o=0;const t={x:scrollX,y:scrollY};r.forEach(e=>e(t))}))},{passive:!0});function v(t="#app"){const e=typeof t=="string"?document.querySelector(t):t;if(!e)throw new Error(`[core] nothing matches ${t}`);return f(e,s)}export{c as defineState,q as effect,m as fail,l as navigate,p as onRoute,h as onScroll,E as reactive,v as start,a as states,M as watch};
+import routeModules from "virtual:core/routes";
+import stateModules from "virtual:core/states";
+import { registerStates, states, defineState } from "./states.js";
+import { start as startRouter, navigate, fail } from "./router.js";
+import { onRoute, onScroll, onResize } from "./lifecycle.js";
+registerStates(stateModules);
+import { reactive, effect } from "./reactive.js";
+import { effect as effect2 } from "./reactive.js";
+function start(target = "#app") {
+  const root = typeof target === "string" ? document.querySelector(target) : target;
+  if (!root) throw new Error(`[core] nothing matches ${target}`);
+  return startRouter(root, routeModules);
+}
+export {
+  defineState,
+  effect,
+  fail,
+  navigate,
+  onRoute,
+  onResize,
+  onScroll,
+  reactive,
+  start,
+  states,
+  effect2 as watch
+};

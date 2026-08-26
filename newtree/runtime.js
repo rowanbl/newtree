@@ -1,1 +1,348 @@
-import{effect as T}from"./reactive.js";import{states as F,createScope as H}from"./states.js";import{loadAsset as R,loadAssetRaw as _}from"virtual:core/assets";const z=Object.freeze({}),B=new Set(["value","checked","selected","indeterminate"]);function Q(t){let r=null;return{usesClass:!!t.usesClass,create(n={},i={},l={}){const h=l.states??F;r||(r=document.createElement("template"),r.innerHTML=t.html);const A=r.content.cloneNode(!0),v=l.props??z,f=(e,k)=>e(h,n,k,i,v),y=[];for(const e of A.querySelectorAll("[data-v]"))y[+e.getAttribute("data-v")]=e,e.removeAttribute("data-v");const p=[],S=[],u=document.createTreeWalker(A,NodeFilter.SHOW_COMMENT),E=[];for(;u.nextNode();)E.push(u.currentNode);for(const e of E){const k=/^([:#])(\d+)$/.exec(e.data);k&&((k[1]===":"?p:S)[+k[2]]=e)}const w=[],P=[];t.parts.forEach((e,k)=>{if(e.k!=="t")return;const s=document.createTextNode("");p[k].replaceWith(s),w.push(T(()=>{s.data=q(f(e.f))}))}),t.parts.forEach((e,k)=>{const s=y[e.e];if(e.k==="a")w.push(T(()=>b(y[e.e],e.n,f(e.f))));else if(e.k==="asset"){let o=0;w.push(T(()=>{const a=f(e.f),c=++o;if(!a){s.removeAttribute(e.n);return}R(String(a)).then(m=>{c===o&&b(s,e.n,m)}).catch(m=>{c===o&&s.removeAttribute(e.n),console.error(`[core] could not load asset ${a}`,m)})}))}else if(e.k==="svg"){let o=0;const a=()=>{s.replaceChildren(document.createTextNode(e.g?q(f(e.g)):"")),s.setAttribute("data-svg-fallback","")};w.push(T(()=>{const c=f(e.f),m=++o;if(!c){a();return}_(String(c)).then(d=>{if(m===o){const x=V(s,d);y[e.e]=x;const g=C.indexOf(s);g>=0&&(C[g]=x)}}).catch(d=>{m===o&&a()})}))}else if(e.k==="cycle"){let o=null,a=null,c=null;const m=()=>{o&&clearInterval(o),a&&clearTimeout(a),o=null,a=null},d=()=>{m(),c&&document.removeEventListener("visibilitychange",c),c=null};w.push(T(()=>{d();const x=String(f(e.f)??"").split("|").map(N=>N.trim()).filter(Boolean);if(!x.length){s.replaceChildren();return}let g=0;if(s.replaceChildren(I(x[g],"is-in")),x.length<2||matchMedia("(prefers-reduced-motion: reduce)").matches)return;const M=()=>{if(!s.isConnected){d();return}s.querySelectorAll(".cycling-text-item.is-out").forEach(j=>j.remove());const N=s.querySelector(".cycling-text-item.is-in");N?.classList.replace("is-in","is-out"),g=(g+1)%x.length,s.append(I(x[g],"is-in")),a=setTimeout(()=>N?.remove(),300)},O=()=>{m(),!document.hidden&&s.isConnected&&(o=setInterval(M,2200))};c=O,document.addEventListener("visibilitychange",c),O()})),P.push({destroy:d})}else if(e.k==="lazy"){let o=null,a=!1;w.push(T(()=>{o?.disconnect(),a=!1;const c=f(e.f);if(!c)return;const m=()=>{const d=new Image;d.src=c,(d.decode?d.decode():new Promise((g,M)=>{d.onload=g,d.onerror=M})).then(()=>{a||(b(s,"src",c),s.classList.add("is-loaded"))}).catch(()=>{})};o=new IntersectionObserver(([d])=>{d.isIntersecting&&(o.disconnect(),m())},{rootMargin:"300px"}),o.observe(s)})),P.push({destroy(){a=!0,o?.disconnect()}})}else if(e.k==="e")s.addEventListener(e.n,o=>f(e.f,o));else if(e.k==="s"&&l.content){const o=l.content.create(l.contentScope??{},l.contentParams??{},{states:l.contentStates??h,props:l.contentProps});p[k].before(...o.nodes),P.push(o)}});const L={states:h,props:v,content:l.content,contentScope:l.contentScope,contentParams:l.contentParams,contentProps:l.contentProps};t.blocks.forEach((e,k)=>{const s=S[k];if(e.k==="svgfile"){P.push(Y(e,s,n,i,v,h));return}if(e.k==="comp"){P.push(D(e,s,n,i,v,w,h));return}if(e.k==="states"){const c=H(h,e.names),m=e.v.create(n,i,{...L,states:c.states});s.before(...m.nodes),P.push({destroy(){m.destroy(),c.dispose()}});return}let o=[];const a=()=>{for(const c of o)c.destroy();o=[]};w.push(T(()=>{const c=f(e.f);if(a(),e.k==="if"){c&&(o=[W(e.v,n,i,L,s)]);return}o=(c==null?[]:Array.from(c)).map((d,x)=>{const g={...n,[e.item]:d};return e.index&&(g[e.index]=x),W(e.v,g,i,L,s)})})),P.push({destroy:a})});const C=[...A.childNodes];return{nodes:C,destroy(){for(const e of w)e.stop();for(const e of P)e.destroy();for(const e of C)e.remove()}}}}}function I(t,r){const n=document.createElement("span");return n.className=`cycling-text-item ${r}`,n.textContent=t,n}function W(t,r,n,i,l){const h=t.create(r,n,{...i});return l.before(...h.nodes),h}function Y(t,r,n,i,l,h){const A=y=>y(h,n,void 0,i,l);let v=null,f=!1;return _(String(A(t.f))).then(y=>{if(f)return;const p=$(y);for(const S of t.attrs)b(p,S.n,A(S.f));r.before(p),v={destroy:()=>p.remove()}}).catch(()=>{f||!t.fallback||(v=t.fallback.create(n,i,{states:h,props:l}),r.before(...v.nodes))}),{destroy(){f=!0,v?.destroy()}}}function D(t,r,n,i,l,h,A){const v=typeof t.v=="function"?t.v():t.v,f=(u,E)=>u(A,n,E,i,l),y={};for(const u of t.props)Object.defineProperty(y,u.n,{enumerable:!0,get:()=>f(u.f)});const p=v.create({},i,{states:A,props:y,content:t.content,contentScope:n,contentParams:i,contentProps:l,contentStates:A});r.before(...p.nodes);const S=p.nodes.find(u=>u.nodeType===Node.ELEMENT_NODE);if(S){for(const u of t.events)S.addEventListener(u.n,E=>f(u.f,E));if(t.cls&&!v.usesClass){let u=[];h.push(T(()=>{const E=String(f(t.cls)??"").split(/\s+/).filter(Boolean);S.classList.remove(...u),S.classList.add(...E),S.__extraClass=E.join(" "),u=E}))}}return p}function b(t,r,n){if(B.has(r)&&r in t){t[r]=n;return}if(r==="class"){const i=`${n??""} ${t.__extraClass??""}`.replace(/\s+/g," ").trim();i?t.setAttribute("class",i):t.removeAttribute("class");return}n===!1||n==null?t.removeAttribute(r):t.setAttribute(r,n===!0?"":String(n))}function $(t){const r=document.createElement("template");r.innerHTML=t.trim();const n=r.content.querySelector("svg");if(!n)throw new Error("[core] an svg asset did not contain an <svg> root");return n}function V(t,r){const n=$(r);for(const i of t.attributes)n.setAttribute(i.name,i.value);return t.replaceWith(n),n}const q=t=>t==null?"":String(t);export{Q as view};
+import { effect } from "./reactive.js";
+import { states as globalStates, createScope } from "./states.js";
+import { loadAsset, loadAssetRaw } from "virtual:core/assets";
+const EMPTY = Object.freeze({});
+const AS_PROPERTY = /* @__PURE__ */ new Set(["value", "checked", "selected", "indeterminate"]);
+function view(def) {
+  let tpl = null;
+  return {
+    // True when the file places {:class} itself, so the caller's class is
+    // already positioned and must not be merged in a second time.
+    usesClass: !!def.usesClass,
+    /**
+     * @param scope   loop variables in lexical scope (`each` fills this)
+     * @param params  route parameters
+     * @param opts    { states, props, content, contentScope, contentParams, contentProps }
+     */
+    create(scope = {}, params = {}, opts = {}) {
+      const states = opts.states ?? globalStates;
+      if (!tpl) {
+        tpl = document.createElement("template");
+        tpl.innerHTML = def.html;
+      }
+      const frag = tpl.content.cloneNode(true);
+      const props = opts.props ?? EMPTY;
+      const call = (f, event) => f(states, scope, event, params, props);
+      const els = [];
+      for (const el of frag.querySelectorAll("[data-v]")) {
+        els[+el.getAttribute("data-v")] = el;
+        el.removeAttribute("data-v");
+      }
+      const textAt = [];
+      const blockAt = [];
+      const walker = document.createTreeWalker(frag, NodeFilter.SHOW_COMMENT);
+      const comments = [];
+      while (walker.nextNode()) comments.push(walker.currentNode);
+      for (const c of comments) {
+        const m = /^([:#])(\d+)$/.exec(c.data);
+        if (m) (m[1] === ":" ? textAt : blockAt)[+m[2]] = c;
+      }
+      const effects = [];
+      const children = [];
+      def.parts.forEach((p, i) => {
+        if (p.k !== "t") return;
+        const node = document.createTextNode("");
+        textAt[i].replaceWith(node);
+        effects.push(effect(() => {
+          node.data = display(call(p.f));
+        }));
+      });
+      def.parts.forEach((p, i) => {
+        const el = els[p.e];
+        if (p.k === "a") {
+          effects.push(effect(() => setAttribute(els[p.e], p.n, call(p.f))));
+        } else if (p.k === "asset") {
+          let version = 0;
+          effects.push(effect(() => {
+            const name = call(p.f);
+            const mine = ++version;
+            if (!name) {
+              el.removeAttribute(p.n);
+              return;
+            }
+            loadAsset(String(name)).then((url) => {
+              if (mine === version) setAttribute(el, p.n, url);
+            }).catch((error) => {
+              if (mine === version) el.removeAttribute(p.n);
+              console.error(`[core] could not load asset ${name}`, error);
+            });
+          }));
+        } else if (p.k === "svg") {
+          let version = 0;
+          const fallback = () => {
+            el.replaceChildren(document.createTextNode(p.g ? display(call(p.g)) : ""));
+            el.setAttribute("data-svg-fallback", "");
+          };
+          effects.push(effect(() => {
+            const name = call(p.f);
+            const mine = ++version;
+            if (!name) {
+              fallback();
+              return;
+            }
+            loadAssetRaw(String(name)).then((markup) => {
+              if (mine === version) {
+                const svg = replaceWithSvg(el, markup);
+                els[p.e] = svg;
+                const nodeIndex = nodes.indexOf(el);
+                if (nodeIndex >= 0) nodes[nodeIndex] = svg;
+              }
+            }).catch((error) => {
+              if (mine === version) fallback();
+            });
+          }));
+        } else if (p.k === "cycle") {
+          let timer = null;
+          let exitTimer = null;
+          let onVisibility = null;
+          const pause = () => {
+            if (timer) clearInterval(timer);
+            if (exitTimer) clearTimeout(exitTimer);
+            timer = null;
+            exitTimer = null;
+          };
+          const stop = () => {
+            pause();
+            if (onVisibility) document.removeEventListener("visibilitychange", onVisibility);
+            onVisibility = null;
+          };
+          effects.push(effect(() => {
+            stop();
+            const words = String(call(p.f) ?? "").split("|").map((word) => word.trim()).filter(Boolean);
+            if (!words.length) {
+              el.replaceChildren();
+              return;
+            }
+            let index = 0;
+            el.replaceChildren(cyclingWord(words[index], "is-in"));
+            if (words.length < 2 || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+            const advance = () => {
+              if (!el.isConnected) {
+                stop();
+                return;
+              }
+              el.querySelectorAll(".cycling-text-item.is-out").forEach((word) => word.remove());
+              const leaving = el.querySelector(".cycling-text-item.is-in");
+              leaving?.classList.replace("is-in", "is-out");
+              index = (index + 1) % words.length;
+              el.append(cyclingWord(words[index], "is-in"));
+              exitTimer = setTimeout(() => leaving?.remove(), 300);
+            };
+            const resume = () => {
+              pause();
+              if (!document.hidden && el.isConnected) timer = setInterval(advance, 2200);
+            };
+            onVisibility = resume;
+            document.addEventListener("visibilitychange", onVisibility);
+            resume();
+          }));
+          children.push({ destroy: stop });
+        } else if (p.k === "lazy") {
+          let observer = null;
+          let cancelled = false;
+          effects.push(effect(() => {
+            observer?.disconnect();
+            cancelled = false;
+            const source = call(p.f);
+            if (!source) return;
+            const load = () => {
+              const image = new Image();
+              image.src = source;
+              const ready = image.decode ? image.decode() : new Promise((resolve, reject) => {
+                image.onload = resolve;
+                image.onerror = reject;
+              });
+              ready.then(() => {
+                if (!cancelled) {
+                  setAttribute(el, "src", source);
+                  el.classList.add("is-loaded");
+                }
+              }).catch(() => {
+              });
+            };
+            observer = new IntersectionObserver(([entry]) => {
+              if (!entry.isIntersecting) return;
+              observer.disconnect();
+              load();
+            }, { rootMargin: "300px" });
+            observer.observe(el);
+          }));
+          children.push({ destroy() {
+            cancelled = true;
+            observer?.disconnect();
+          } });
+        } else if (p.k === "e") {
+          el.addEventListener(p.n, (event) => call(p.f, event));
+        } else if (p.k === "s" && opts.content) {
+          const inst = opts.content.create(opts.contentScope ?? {}, opts.contentParams ?? {}, {
+            states: opts.contentStates ?? states,
+            props: opts.contentProps
+          });
+          textAt[i].before(...inst.nodes);
+          children.push(inst);
+        }
+      });
+      const inherited = {
+        states,
+        props,
+        content: opts.content,
+        contentScope: opts.contentScope,
+        contentParams: opts.contentParams,
+        contentProps: opts.contentProps
+      };
+      def.blocks.forEach((b, i) => {
+        const anchor = blockAt[i];
+        if (b.k === "svgfile") {
+          children.push(svgFile(b, anchor, scope, params, props, states));
+          return;
+        }
+        if (b.k === "comp") {
+          children.push(component(b, anchor, scope, params, props, effects, states));
+          return;
+        }
+        if (b.k === "states") {
+          const scoped = createScope(states, b.names);
+          const inst = b.v.create(scope, params, { ...inherited, states: scoped.states });
+          anchor.before(...inst.nodes);
+          children.push({
+            destroy() {
+              inst.destroy();
+              scoped.dispose();
+            }
+          });
+          return;
+        }
+        let instances = [];
+        const clear = () => {
+          for (const inst of instances) inst.destroy();
+          instances = [];
+        };
+        effects.push(effect(() => {
+          const value = call(b.f);
+          clear();
+          if (b.k === "if") {
+            if (value) instances = [mount(b.v, scope, params, inherited, anchor)];
+            return;
+          }
+          const list = value == null ? [] : Array.from(value);
+          instances = list.map((item, index) => {
+            const inner = { ...scope, [b.item]: item };
+            if (b.index) inner[b.index] = index;
+            return mount(b.v, inner, params, inherited, anchor);
+          });
+        }));
+        children.push({ destroy: clear });
+      });
+      const nodes = [...frag.childNodes];
+      return {
+        nodes,
+        destroy() {
+          for (const e of effects) e.stop();
+          for (const c of children) c.destroy();
+          for (const n of nodes) n.remove();
+        }
+      };
+    }
+  };
+}
+function cyclingWord(value, state) {
+  const word = document.createElement("span");
+  word.className = `cycling-text-item ${state}`;
+  word.textContent = value;
+  return word;
+}
+function mount(child, scope, params, inherited, anchor) {
+  const inst = child.create(scope, params, { ...inherited });
+  anchor.before(...inst.nodes);
+  return inst;
+}
+function svgFile(b, anchor, scope, params, props, states) {
+  const call = (f) => f(states, scope, void 0, params, props);
+  let current = null;
+  let disposed = false;
+  loadAssetRaw(String(call(b.f))).then((markup) => {
+    if (disposed) return;
+    const svg = svgFromMarkup(markup);
+    for (const attr of b.attrs) setAttribute(svg, attr.n, call(attr.f));
+    anchor.before(svg);
+    current = { destroy: () => svg.remove() };
+  }).catch(() => {
+    if (disposed || !b.fallback) return;
+    current = b.fallback.create(scope, params, { states, props });
+    anchor.before(...current.nodes);
+  });
+  return {
+    destroy() {
+      disposed = true;
+      current?.destroy();
+    }
+  };
+}
+function component(b, anchor, scope, params, props, effects, states) {
+  const child = typeof b.v === "function" ? b.v() : b.v;
+  const call = (f, event) => f(states, scope, event, params, props);
+  const own = {};
+  for (const p of b.props) {
+    Object.defineProperty(own, p.n, { enumerable: true, get: () => call(p.f) });
+  }
+  const inst = child.create({}, params, {
+    // A component sees the states in force where it was written, so <Editor />
+    // inside states="editor" picks up that row's instance.
+    states,
+    props: own,
+    content: b.content,
+    contentScope: scope,
+    contentParams: params,
+    contentProps: props,
+    contentStates: states
+  });
+  anchor.before(...inst.nodes);
+  const root = inst.nodes.find((n) => n.nodeType === Node.ELEMENT_NODE);
+  if (root) {
+    for (const ev of b.events) {
+      root.addEventListener(ev.n, (event) => call(ev.f, event));
+    }
+    if (b.cls && !child.usesClass) {
+      let previous = [];
+      effects.push(effect(() => {
+        const next = String(call(b.cls) ?? "").split(/\s+/).filter(Boolean);
+        root.classList.remove(...previous);
+        root.classList.add(...next);
+        root.__extraClass = next.join(" ");
+        previous = next;
+      }));
+    }
+  }
+  return inst;
+}
+function setAttribute(el, name, value) {
+  if (AS_PROPERTY.has(name) && name in el) {
+    el[name] = value;
+    return;
+  }
+  if (name === "class") {
+    const merged = `${value ?? ""} ${el.__extraClass ?? ""}`.replace(/\s+/g, " ").trim();
+    if (merged) el.setAttribute("class", merged);
+    else el.removeAttribute("class");
+    return;
+  }
+  if (value === false || value == null) el.removeAttribute(name);
+  else el.setAttribute(name, value === true ? "" : String(value));
+}
+function svgFromMarkup(markup) {
+  const template = document.createElement("template");
+  template.innerHTML = markup.trim();
+  const svg = template.content.querySelector("svg");
+  if (!svg) throw new Error("[core] an svg asset did not contain an <svg> root");
+  return svg;
+}
+function replaceWithSvg(host, markup) {
+  const svg = svgFromMarkup(markup);
+  for (const attr of host.attributes) svg.setAttribute(attr.name, attr.value);
+  host.replaceWith(svg);
+  return svg;
+}
+const display = (value) => value == null ? "" : String(value);
+export {
+  view
+};

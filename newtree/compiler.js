@@ -1,11 +1,419 @@
-const C=new Set(["script","style","textarea","title"]),O=new Set(["area","base","br","col","embed","hr","img","input","link","meta","param","source","track","wbr"]);function B(n,{filename:e="view",runtime:t="/src/core/runtime.js",resolve:a,stateNames:i,assetExists:o,envIs:l}={}){const r={filename:e,resolve:a,stateNames:i,assetExists:o,envIs:l,components:new Map,usesClass:!1},m=v(I(z(n)),[],r,!0),s=[...r.components].map(([f,c])=>`import ${f} from ${JSON.stringify(c)}`);return[`import { view } from ${JSON.stringify(t)}`,...s,"",`export default ${m}`,""].join(`
-`)}function I(n){const e={children:[]},t=[e],a=()=>t[t.length-1],i=l=>{l&&a().children.push({text:l})};let o=0;for(;o<n.length;){const l=n.indexOf("<",o);if(l<0){i(n.slice(o));break}if(l>o&&i(n.slice(o,l)),o=l,n.startsWith("<!--",o)){const u=n.indexOf("-->",o+4);o=u<0?n.length:u+3;continue}if(n.startsWith("</",o)){const u=n.indexOf(">",o),g=n.slice(o+2,u<0?n.length:u).trim().toLowerCase();o=u<0?n.length:u+1;for(let d=t.length-1;d>0;d--)if(t[d].name===g){t.length=d;break}continue}const r=/^<([a-zA-Z][\w:.-]*)/.exec(n.slice(o));if(!r){i("<"),o++;continue}const m=r[1],s={tag:m,name:m.toLowerCase(),attrs:[],children:[]};let f=o+r[0].length,c=!1;for(;f<n.length;){for(;/\s/.test(n[f]);)f++;if(n[f]===">"){f++;break}if(n.startsWith("/>",f)){c=!0,f+=2;break}const u=/^[^\s"'>/=]+/.exec(n.slice(f));if(!u){f++;continue}const g=u[0];f+=g.length;let d=null;const _=f;for(;/\s/.test(n[f]);)f++;if(n[f]==="="){for(f++;/\s/.test(n[f]);)f++;const S=n[f];if(S==='"'||S==="'"){const k=n.indexOf(S,f+1);d=n.slice(f+1,k<0?n.length:k),f=k<0?n.length:k+1}else{const k=/^[^\s>]*/.exec(n.slice(f));d=k[0],f+=k[0].length}}else f=_;s.attrs.push({name:g,value:d})}if(a().children.push(s),o=f,!(c||O.has(s.name))){if(C.has(s.name)){const u=n.slice(o),g=new RegExp(`</${s.name}\\s*>`,"i").exec(u);s.raw=g?u.slice(0,g.index):u,o+=g?g.index+g[0].length:u.length;continue}t.push(s)}}return e.children}function z(n){const e=t=>t.replace(/&/g,"&amp;").replace(/"/g,"&quot;");return n.replace(/@if\s*\(\s*asset_exists\(\s*(['"])([\s\S]*?)\1\s*\)\s*\)([\s\S]*?)@else([\s\S]*?)@endif/g,(t,a,i,o,l)=>`<AssetIf file="${e(i)}"><Then>${o}</Then><Else>${l}</Else></AssetIf>`).replace(/@asset\(\s*(['"])([\s\S]*?)\1\s*(?:,\s*([^)]*?))?\s*\)/g,(t,a,i,o="")=>`<Asset file="${e(i)}" ${o}/>`)}function v(n,e,t,a=!1){const i={html:"",parts:[],blocks:[],els:0,scope:e,file:t};b(n,i);const o=a&&t.usesClass?`
-  usesClass: true,`:"";return`view({
-  html: ${JSON.stringify(i.html)},
-  parts: [${A(i.parts)}],
-  blocks: [${A(i.blocks)}],${o}
-})`}function A(n){return n.length?`
-    ${n.join(`,
-    `)},
-  `:""}function b(n,e){for(const t of n)t.text!==void 0?T(t.text,e):W(t,e)}function T(n,e){for(const t of j(n)){if(t.text!==void 0){e.html+=t.text;continue}const a=e.parts.length;if(t.expr.startsWith(":")){const i=t.expr.slice(1).trim();if(i==="class")throw p(e,"{:class} belongs in a class attribute, not in text");if(i!=="content")throw p(e,`unknown {:${i}} \u2014 text takes {:content}`);e.parts.push("{ k: 's' }")}else e.parts.push(`{ k: 't', f: ${h(t.expr,e)} }`);e.html+=`<!--:${a}-->`}}function W(n,e){const t=w(n,"if");if(t!==void 0){const s=e.blocks.length;e.html+=`<!--#${s}-->`,e.blocks.push(`{ k: 'if', f: ${h(t,e)}, v: ${v([n],e.scope,e.file)} }`);return}const a=w(n,"each");if(a!==void 0){const s=/^\s*([A-Za-z_$][\w$]*)\s*(?:,\s*([A-Za-z_$][\w$]*)\s*)?\sof\s([\s\S]+)$/.exec(a);if(!s)throw p(e,`each="${a}" should read like each="item of states.cart.items"`);const[,f,c,u]=s,g=[...e.scope,f,...c?[c]:[]],d=e.blocks.length;e.html+=`<!--#${d}-->`,e.blocks.push(`{ k: 'each', item: ${JSON.stringify(f)}, index: ${JSON.stringify(c??null)}, f: ${h(u,e)}, v: ${v([n],g,e.file)} }`);return}const i=w(n,"states");if(i!==void 0){const s=i.split(",").map(c=>c.trim()).filter(Boolean);if(!s.length)throw p(e,'states="" needs at least one name');for(const c of s)E(c,e,`states="${c}"`);const f=e.blocks.length;e.html+=`<!--#${f}-->`,e.blocks.push(`{ k: 'states', names: ${JSON.stringify(s)}, v: ${v([n],e.scope,e.file)} }`);return}if(n.tag==="env"&&e.file.envIs){const s=n.attrs.find(f=>f.name==="type")?.value;if(s!=null&&!s.includes("{")){e.file.envIs(s)&&b(n.children,e);return}}if(/^[A-Z]/.test(n.tag)||n.tag==="env")return n.tag==="env"&&(n.tag="Env"),n.tag==="AssetIf"?q(n,e):n.tag==="Asset"?N(n,e):n.tag==="Svg"?Z(n,e):L(n,e);let o="";const l=[];let r=null;for(const s of n.attrs)y(s)?l.push({k:"e",n:J(s.name),f:h(s.value,e,!0)}):s.name==="fallback"?r=h($(s.value,e),e):s.name==="asset"?l.push({k:"asset",n:"src",f:h($(s.value,e),e)}):s.name==="svg"?l.push({k:"svg",f:h($(s.value,e),e)}):s.name==="cycle"?l.push({k:"cycle",f:h($(s.value,e),e)}):s.name==="lazy"?l.push({k:"lazy",f:h($(s.value,e),e)}):s.value!=null&&s.value.includes("{")?l.push({k:"a",n:s.name,f:h($(s.value,e),e)}):o+=s.value==null?` ${s.name}`:` ${s.name}="${M(s.value)}"`;for(const s of l)s.k==="svg"&&r&&(s.g=r);let m="";if(l.length){const s=e.els++;m=` data-v="${s}"`;for(const f of l){const c=f.g?`, g: ${f.g}`:"";e.parts.push(`{ k: '${f.k}', e: ${s}, n: ${JSON.stringify(f.n)}, f: ${f.f}${c} }`)}}e.html+=`<${n.tag}${o}${m}>`,n.raw!==void 0?e.html+=n.raw:b(n.children,e),O.has(n.name)||(e.html+=`</${n.tag}>`)}function q(n,e){const t=w(n,"file");if(t===void 0)throw p(e,"@if(asset_exists(...)) needs an asset path");const a=l=>(n.children.find(r=>r.name===l)?.children??[]).filter(r=>r.text===void 0||!/^\s*$/.test(r.text)),i=a("then"),o=a("else");if(!t.includes("{")&&e.file.assetExists){b(e.file.assetExists(t)?i:o,e);return}if(i.length===1&&i[0].tag==="Asset"){N(i[0],e,v(o,e.scope,e.file));return}throw p(e,"a dynamic @if(asset_exists(...)) must contain one @asset(...) in its true branch")}function N(n,e,t="null"){const a=w(n,"file");if(a===void 0)throw p(e,"@asset(...) needs an asset path");const i=n.attrs.map(l=>{if(y(l))throw p(e,"@asset(...) does not support event handlers");return`{ n: ${JSON.stringify(l.name)}, f: ${h($(l.value,e),e)} }`}),o=e.blocks.length;e.html+=`<!--#${o}-->`,e.blocks.push(`{ k: 'svgfile', f: ${h($(a,e),e)}, attrs: [${i.join(", ")}], fallback: ${t} }`)}function Z(n,e){const t=w(n,"file");if(t===void 0)throw p(e,'<Svg> needs file="group/path.svg"');const a=[];for(const l of n.attrs){if(y(l))throw p(e,"<Svg> does not support event handlers");a.push(`{ n: ${JSON.stringify(l.name)}, f: ${h($(l.value,e),e)} }`)}const i=n.children.length?v(n.children,e.scope,e.file):"null",o=e.blocks.length;e.html+=`<!--#${o}-->`,e.blocks.push(`{ k: 'svgfile', f: ${h($(t,e),e)}, attrs: [${a.join(", ")}], fallback: ${i} }`)}function L(n,e){const t=e.file.resolve?.(n.tag);if(!t)throw p(e,`no component named <${n.tag}> \u2014 expected components/${n.tag}.comp`);e.file.components.set(n.tag,t);const a=[],i=[];let o="null";for(const m of n.attrs){if(y(m)){i.push(`{ n: ${JSON.stringify(J(m.name))}, f: ${h(m.value,e,!0)} }`);continue}const s=h($(m.value,e),e);m.name==="class"&&(o=s),a.push(`{ n: ${JSON.stringify(m.name)}, f: ${s} }`)}const l=n.children.length?v(n.children,e.scope,e.file):"null",r=e.blocks.length;e.html+=`<!--#${r}-->`,e.blocks.push(`{ k: 'comp', v: () => ${n.tag}, props: [${a.join(", ")}], events: [${i.join(", ")}], cls: ${o}, content: ${l} }`)}function h(n,e,t=!1){for(const[,,o]of n.matchAll(/(^|[^\w$.])states\s*\.\s*([A-Za-z_$][\w$]*)/g))E(o,e,`states.${o}`);const a=e.scope.length?`const { ${e.scope.join(", ")} } = $scope; `:"",i=t?`{ ${a}${n}
- }`:`{ ${a}return (${n}) }`;try{new Function("states","$scope","event","params","props",i)}catch(o){throw p(e,`${o.message} in \`${n.trim()}\``)}return`(states, $scope, event, params, props) => ${i}`}function $(n,e){if(n==null)return"true";if(!n.includes("{"))return JSON.stringify(n);const t=j(n).map(i=>i.expr===void 0?i:{expr:F(i.expr,e)});return t.length===1&&t[0].expr!==void 0?t[0].expr:"`"+t.map(i=>i.text!==void 0?R(i.text):"${"+i.expr+"}").join("")+"`"}function F(n,e){if(!n.startsWith(":"))return n;const t=n.slice(1).trim();if(t==="content")throw p(e,"{:content} belongs in text, not in an attribute");if(t!=="class")throw p(e,`unknown {:${t}} \u2014 attributes take {:class}`);return e.file.usesClass=!0,"(props.class ?? '')"}function j(n){const e=[];let t="",a=0;for(;a<n.length;){const i=n[a];if(i==="\\"&&(n[a+1]==="{"||n[a+1]==="}")){t+=n[a+1],a+=2;continue}if(i==="{"){let o=1,l=a+1;for(;l<n.length;l++)if(n[l]==="{")o++;else if(n[l]==="}"&&--o===0)break;if(o!==0){t+=i,a++;continue}t&&(e.push({text:t}),t=""),e.push({expr:n.slice(a+1,l).trim()}),a=l+1;continue}t+=i,a++}return t&&e.push({text:t}),e}const y=n=>/^on[a-z]/i.test(n.name)&&n.value!=null,J=n=>n.slice(2).toLowerCase();function E(n,e,t){const a=e.file.stateNames;if(!(!a||n==="route"||n==="error"||a.has(n)))throw p(e,`${t} \u2014 no ${n}.js in the states directory`)}function w(n,e){const t=n.attrs.findIndex(a=>a.name===e);if(!(t<0))return n.attrs.splice(t,1)[0].value??""}const M=n=>n.replace(/&/g,"&amp;").replace(/"/g,"&quot;"),R=n=>n.replace(/\\/g,"\\\\").replace(/`/g,"\\`").replace(/\$\{/g,"\\${");function p(n,e){return new Error(`[core] ${n.file.filename}: ${e}`)}export{B as compile};
+const RAW_TEXT = /* @__PURE__ */ new Set(["script", "style", "textarea", "title"]);
+const VOID = /* @__PURE__ */ new Set([
+  "area",
+  "base",
+  "br",
+  "col",
+  "embed",
+  "hr",
+  "img",
+  "input",
+  "link",
+  "meta",
+  "param",
+  "source",
+  "track",
+  "wbr"
+]);
+function compile(source, {
+  filename = "view",
+  runtime = "/src/core/runtime.js",
+  resolve,
+  stateNames,
+  assetExists,
+  envIs
+} = {}) {
+  const file = { filename, resolve, stateNames, assetExists, envIs, components: /* @__PURE__ */ new Map(), usesClass: false };
+  const body = gen(parse(blade(source)), [], file, true);
+  const imports = [...file.components].map(([name, spec]) => `import ${name} from ${JSON.stringify(spec)}`);
+  return [
+    `import { view } from ${JSON.stringify(runtime)}`,
+    ...imports,
+    "",
+    `export default ${body}`,
+    ""
+  ].join("\n");
+}
+function parse(src) {
+  const root = { children: [] };
+  const stack = [root];
+  const top = () => stack[stack.length - 1];
+  const text = (value) => {
+    if (value) top().children.push({ text: value });
+  };
+  let i = 0;
+  while (i < src.length) {
+    const lt = src.indexOf("<", i);
+    if (lt < 0) {
+      text(src.slice(i));
+      break;
+    }
+    if (lt > i) text(src.slice(i, lt));
+    i = lt;
+    if (src.startsWith("<!--", i)) {
+      const end = src.indexOf("-->", i + 4);
+      i = end < 0 ? src.length : end + 3;
+      continue;
+    }
+    if (src.startsWith("</", i)) {
+      const gt = src.indexOf(">", i);
+      const name = src.slice(i + 2, gt < 0 ? src.length : gt).trim().toLowerCase();
+      i = gt < 0 ? src.length : gt + 1;
+      for (let d = stack.length - 1; d > 0; d--) {
+        if (stack[d].name === name) {
+          stack.length = d;
+          break;
+        }
+      }
+      continue;
+    }
+    const open = /^<([a-zA-Z][\w:.-]*)/.exec(src.slice(i));
+    if (!open) {
+      text("<");
+      i++;
+      continue;
+    }
+    const tag = open[1];
+    const el = { tag, name: tag.toLowerCase(), attrs: [], children: [] };
+    let j = i + open[0].length;
+    let selfClosing = false;
+    while (j < src.length) {
+      while (/\s/.test(src[j])) j++;
+      if (src[j] === ">") {
+        j++;
+        break;
+      }
+      if (src.startsWith("/>", j)) {
+        selfClosing = true;
+        j += 2;
+        break;
+      }
+      const nameMatch = /^[^\s"'>/=]+/.exec(src.slice(j));
+      if (!nameMatch) {
+        j++;
+        continue;
+      }
+      const name = nameMatch[0];
+      j += name.length;
+      let value = null;
+      const save = j;
+      while (/\s/.test(src[j])) j++;
+      if (src[j] === "=") {
+        j++;
+        while (/\s/.test(src[j])) j++;
+        const quote = src[j];
+        if (quote === '"' || quote === "'") {
+          const end = src.indexOf(quote, j + 1);
+          value = src.slice(j + 1, end < 0 ? src.length : end);
+          j = end < 0 ? src.length : end + 1;
+        } else {
+          const bare = /^[^\s>]*/.exec(src.slice(j));
+          value = bare[0];
+          j += bare[0].length;
+        }
+      } else {
+        j = save;
+      }
+      el.attrs.push({ name, value });
+    }
+    top().children.push(el);
+    i = j;
+    if (selfClosing || VOID.has(el.name)) continue;
+    if (RAW_TEXT.has(el.name)) {
+      const rest = src.slice(i);
+      const close = new RegExp(`</${el.name}\\s*>`, "i").exec(rest);
+      el.raw = close ? rest.slice(0, close.index) : rest;
+      i += close ? close.index + close[0].length : rest.length;
+      continue;
+    }
+    stack.push(el);
+  }
+  return root.children;
+}
+function blade(source) {
+  const escaped = (value) => value.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+  return source.replace(
+    /@if\s*\(\s*asset_exists\(\s*(['"])([\s\S]*?)\1\s*\)\s*\)([\s\S]*?)@else([\s\S]*?)@endif/g,
+    (_, _quote, file, yes, no) => `<AssetIf file="${escaped(file)}"><Then>${yes}</Then><Else>${no}</Else></AssetIf>`
+  ).replace(
+    /@asset\(\s*(['"])([\s\S]*?)\1\s*(?:,\s*([^)]*?))?\s*\)/g,
+    (_, _quote, file, attrs = "") => `<Asset file="${escaped(file)}" ${attrs}/>`
+  );
+}
+function gen(nodes, scope, file, root = false) {
+  const ctx = { html: "", parts: [], blocks: [], els: 0, scope, file };
+  walk(nodes, ctx);
+  const flag = root && file.usesClass ? "\n  usesClass: true," : "";
+  return `view({
+  html: ${JSON.stringify(ctx.html)},
+  parts: [${join(ctx.parts)}],
+  blocks: [${join(ctx.blocks)}],${flag}
+})`;
+}
+function join(list) {
+  return list.length ? `
+    ${list.join(",\n    ")},
+  ` : "";
+}
+function walk(nodes, ctx) {
+  for (const node of nodes) {
+    if (node.text !== void 0) emitText(node.text, ctx);
+    else emitElement(node, ctx);
+  }
+}
+function emitText(str, ctx) {
+  for (const seg of holes(str)) {
+    if (seg.text !== void 0) {
+      ctx.html += seg.text;
+      continue;
+    }
+    const i = ctx.parts.length;
+    if (seg.expr.startsWith(":")) {
+      const slot = seg.expr.slice(1).trim();
+      if (slot === "class") throw fail(ctx, `{:class} belongs in a class attribute, not in text`);
+      if (slot !== "content") throw fail(ctx, `unknown {:${slot}} \u2014 text takes {:content}`);
+      ctx.parts.push(`{ k: 's' }`);
+    } else {
+      ctx.parts.push(`{ k: 't', f: ${fn(seg.expr, ctx)} }`);
+    }
+    ctx.html += `<!--:${i}-->`;
+  }
+}
+function emitElement(el, ctx) {
+  const cond = take(el, "if");
+  if (cond !== void 0) {
+    const i = ctx.blocks.length;
+    ctx.html += `<!--#${i}-->`;
+    ctx.blocks.push(`{ k: 'if', f: ${fn(cond, ctx)}, v: ${gen([el], ctx.scope, ctx.file)} }`);
+    return;
+  }
+  const loop = take(el, "each");
+  if (loop !== void 0) {
+    const m = /^\s*([A-Za-z_$][\w$]*)\s*(?:,\s*([A-Za-z_$][\w$]*)\s*)?\sof\s([\s\S]+)$/.exec(loop);
+    if (!m) throw fail(ctx, `each="${loop}" should read like each="item of states.cart.items"`);
+    const [, item, index, list] = m;
+    const inner = [...ctx.scope, item, ...index ? [index] : []];
+    const i = ctx.blocks.length;
+    ctx.html += `<!--#${i}-->`;
+    ctx.blocks.push(
+      `{ k: 'each', item: ${JSON.stringify(item)}, index: ${JSON.stringify(index ?? null)}, f: ${fn(list, ctx)}, v: ${gen([el], inner, ctx.file)} }`
+    );
+    return;
+  }
+  const provide = take(el, "states");
+  if (provide !== void 0) {
+    const names = provide.split(",").map((s) => s.trim()).filter(Boolean);
+    if (!names.length) throw fail(ctx, `states="" needs at least one name`);
+    for (const name of names) knownState(name, ctx, `states="${name}"`);
+    const i = ctx.blocks.length;
+    ctx.html += `<!--#${i}-->`;
+    ctx.blocks.push(
+      `{ k: 'states', names: ${JSON.stringify(names)}, v: ${gen([el], ctx.scope, ctx.file)} }`
+    );
+    return;
+  }
+  if (el.tag === "env" && ctx.file.envIs) {
+    const type = el.attrs.find((attr) => attr.name === "type")?.value;
+    if (type != null && !type.includes("{")) {
+      if (ctx.file.envIs(type)) walk(el.children, ctx);
+      return;
+    }
+  }
+  if (/^[A-Z]/.test(el.tag) || el.tag === "env") {
+    if (el.tag === "env") el.tag = "Env";
+    if (el.tag === "AssetIf") return emitAssetIf(el, ctx);
+    if (el.tag === "Asset") return emitAsset(el, ctx);
+    if (el.tag === "Svg") return emitSvg(el, ctx);
+    return emitComponent(el, ctx);
+  }
+  let attrs = "";
+  const binds = [];
+  let svgFallback = null;
+  for (const a of el.attrs) {
+    if (isEvent(a)) {
+      binds.push({ k: "e", n: eventName(a.name), f: fn(a.value, ctx, true) });
+    } else if (a.name === "fallback") {
+      svgFallback = fn(attrExpr(a.value, ctx), ctx);
+    } else if (a.name === "asset") {
+      binds.push({ k: "asset", n: "src", f: fn(attrExpr(a.value, ctx), ctx) });
+    } else if (a.name === "svg") {
+      binds.push({ k: "svg", f: fn(attrExpr(a.value, ctx), ctx) });
+    } else if (a.name === "cycle") {
+      binds.push({ k: "cycle", f: fn(attrExpr(a.value, ctx), ctx) });
+    } else if (a.name === "lazy") {
+      binds.push({ k: "lazy", f: fn(attrExpr(a.value, ctx), ctx) });
+    } else if (a.value != null && a.value.includes("{")) {
+      binds.push({ k: "a", n: a.name, f: fn(attrExpr(a.value, ctx), ctx) });
+    } else {
+      attrs += a.value == null ? ` ${a.name}` : ` ${a.name}="${escapeAttr(a.value)}"`;
+    }
+  }
+  for (const bind of binds) {
+    if (bind.k === "svg" && svgFallback) bind.g = svgFallback;
+  }
+  let marker = "";
+  if (binds.length) {
+    const e = ctx.els++;
+    marker = ` data-v="${e}"`;
+    for (const b of binds) {
+      const fallback = b.g ? `, g: ${b.g}` : "";
+      ctx.parts.push(`{ k: '${b.k}', e: ${e}, n: ${JSON.stringify(b.n)}, f: ${b.f}${fallback} }`);
+    }
+  }
+  ctx.html += `<${el.tag}${attrs}${marker}>`;
+  if (el.raw !== void 0) ctx.html += el.raw;
+  else walk(el.children, ctx);
+  if (!VOID.has(el.name)) ctx.html += `</${el.tag}>`;
+}
+function emitAssetIf(el, ctx) {
+  const file = take(el, "file");
+  if (file === void 0) throw fail(ctx, "@if(asset_exists(...)) needs an asset path");
+  const branch = (name) => (el.children.find((node) => node.name === name)?.children ?? []).filter((node) => node.text === void 0 || !/^\s*$/.test(node.text));
+  const yes = branch("then");
+  const no = branch("else");
+  if (!file.includes("{") && ctx.file.assetExists) {
+    walk(ctx.file.assetExists(file) ? yes : no, ctx);
+    return;
+  }
+  if (yes.length === 1 && yes[0].tag === "Asset") {
+    emitAsset(yes[0], ctx, gen(no, ctx.scope, ctx.file));
+    return;
+  }
+  throw fail(ctx, "a dynamic @if(asset_exists(...)) must contain one @asset(...) in its true branch");
+}
+function emitAsset(el, ctx, fallback = "null") {
+  const file = take(el, "file");
+  if (file === void 0) throw fail(ctx, "@asset(...) needs an asset path");
+  const attrs = el.attrs.map((a) => {
+    if (isEvent(a)) throw fail(ctx, "@asset(...) does not support event handlers");
+    return `{ n: ${JSON.stringify(a.name)}, f: ${fn(attrExpr(a.value, ctx), ctx)} }`;
+  });
+  const i = ctx.blocks.length;
+  ctx.html += `<!--#${i}-->`;
+  ctx.blocks.push(`{ k: 'svgfile', f: ${fn(attrExpr(file, ctx), ctx)}, attrs: [${attrs.join(", ")}], fallback: ${fallback} }`);
+}
+function emitSvg(el, ctx) {
+  const file = take(el, "file");
+  if (file === void 0) throw fail(ctx, '<Svg> needs file="group/path.svg"');
+  const attrs = [];
+  for (const a of el.attrs) {
+    if (isEvent(a)) throw fail(ctx, "<Svg> does not support event handlers");
+    attrs.push(`{ n: ${JSON.stringify(a.name)}, f: ${fn(attrExpr(a.value, ctx), ctx)} }`);
+  }
+  const fallback = el.children.length ? gen(el.children, ctx.scope, ctx.file) : "null";
+  const i = ctx.blocks.length;
+  ctx.html += `<!--#${i}-->`;
+  ctx.blocks.push(
+    `{ k: 'svgfile', f: ${fn(attrExpr(file, ctx), ctx)}, attrs: [${attrs.join(", ")}], fallback: ${fallback} }`
+  );
+}
+function emitComponent(el, ctx) {
+  const spec = ctx.file.resolve?.(el.tag);
+  if (!spec) throw fail(ctx, `no component named <${el.tag}> \u2014 expected components/${el.tag}.comp`);
+  ctx.file.components.set(el.tag, spec);
+  const props = [];
+  const events = [];
+  let cls = "null";
+  for (const a of el.attrs) {
+    if (isEvent(a)) {
+      events.push(`{ n: ${JSON.stringify(eventName(a.name))}, f: ${fn(a.value, ctx, true)} }`);
+      continue;
+    }
+    const source = fn(attrExpr(a.value, ctx), ctx);
+    if (a.name === "class") cls = source;
+    props.push(`{ n: ${JSON.stringify(a.name)}, f: ${source} }`);
+  }
+  const content = el.children.length ? gen(el.children, ctx.scope, ctx.file) : "null";
+  const i = ctx.blocks.length;
+  ctx.html += `<!--#${i}-->`;
+  ctx.blocks.push(
+    `{ k: 'comp', v: () => ${el.tag}, props: [${props.join(", ")}], events: [${events.join(", ")}], cls: ${cls}, content: ${content} }`
+  );
+}
+function fn(expr, ctx, statement = false) {
+  for (const [, , name] of expr.matchAll(/(^|[^\w$.])states\s*\.\s*([A-Za-z_$][\w$]*)/g)) {
+    knownState(name, ctx, `states.${name}`);
+  }
+  const decl = ctx.scope.length ? `const { ${ctx.scope.join(", ")} } = $scope; ` : "";
+  const body = statement ? `{ ${decl}${expr}
+ }` : `{ ${decl}return (${expr}) }`;
+  try {
+    new Function("states", "$scope", "event", "params", "props", body);
+  } catch (e) {
+    throw fail(ctx, `${e.message} in \`${expr.trim()}\``);
+  }
+  return `(states, $scope, event, params, props) => ${body}`;
+}
+function attrExpr(value, ctx) {
+  if (value == null) return "true";
+  if (!value.includes("{")) return JSON.stringify(value);
+  const segs = holes(value).map((s) => s.expr === void 0 ? s : { expr: attrHole(s.expr, ctx) });
+  if (segs.length === 1 && segs[0].expr !== void 0) return segs[0].expr;
+  const parts = segs.map((s) => s.text !== void 0 ? escapeTemplate(s.text) : "${" + s.expr + "}");
+  return "`" + parts.join("") + "`";
+}
+function attrHole(expr, ctx) {
+  if (!expr.startsWith(":")) return expr;
+  const name = expr.slice(1).trim();
+  if (name === "content") throw fail(ctx, `{:content} belongs in text, not in an attribute`);
+  if (name !== "class") throw fail(ctx, `unknown {:${name}} \u2014 attributes take {:class}`);
+  ctx.file.usesClass = true;
+  return `(props.class ?? '')`;
+}
+function holes(str) {
+  const out = [];
+  let buf = "";
+  let i = 0;
+  while (i < str.length) {
+    const c = str[i];
+    if (c === "\\" && (str[i + 1] === "{" || str[i + 1] === "}")) {
+      buf += str[i + 1];
+      i += 2;
+      continue;
+    }
+    if (c === "{") {
+      let depth = 1;
+      let j = i + 1;
+      for (; j < str.length; j++) {
+        if (str[j] === "{") depth++;
+        else if (str[j] === "}" && --depth === 0) break;
+      }
+      if (depth !== 0) {
+        buf += c;
+        i++;
+        continue;
+      }
+      if (buf) {
+        out.push({ text: buf });
+        buf = "";
+      }
+      out.push({ expr: str.slice(i + 1, j).trim() });
+      i = j + 1;
+      continue;
+    }
+    buf += c;
+    i++;
+  }
+  if (buf) out.push({ text: buf });
+  return out;
+}
+const isEvent = (a) => /^on[a-z]/i.test(a.name) && a.value != null;
+const eventName = (name) => name.slice(2).toLowerCase();
+function knownState(name, ctx, label) {
+  const known = ctx.file.stateNames;
+  if (!known || name === "route" || name === "error" || known.has(name)) return;
+  throw fail(ctx, `${label} \u2014 no ${name}.js in the states directory`);
+}
+function take(el, name) {
+  const i = el.attrs.findIndex((a) => a.name === name);
+  if (i < 0) return void 0;
+  return el.attrs.splice(i, 1)[0].value ?? "";
+}
+const escapeAttr = (s) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+const escapeTemplate = (s) => s.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$\{/g, "\\${");
+function fail(ctx, message) {
+  return new Error(`[core] ${ctx.file.filename}: ${message}`);
+}
+export {
+  compile
+};

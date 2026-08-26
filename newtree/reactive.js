@@ -1,1 +1,125 @@
-const i=Symbol("raw"),u=Symbol("iterate"),l=new WeakMap,a=new WeakMap;let o=null,c=null;const f=new Set;let d=!1;function p(e,n){if(!o)return;let t=l.get(e);t||l.set(e,t=new Map);let s=t.get(n);s||t.set(n,s=new Set),!s.has(o)&&(s.add(o),o.deps.push(s))}function r(e,n){const t=l.get(e)?.get(n);if(t){for(const s of t)s!==o&&!s.disposed&&f.add(s);f.size&&!d&&(d=!0,queueMicrotask(A))}}function A(){d=!1;const e=[...f];f.clear();for(const n of e)n.disposed||n.run()}const M={get(e,n,t){if(n===i)return e;const s=Reflect.get(e,n,t);return typeof n=="symbol"?s:(p(e,n),j(s))},set(e,n,t,s){const h=Array.isArray(e),y=h?e.length:0,R=Object.hasOwn(e,n),x=e[n],w=t!==null&&typeof t=="object"?t[i]??t:t;return Reflect.set(e,n,w,s)?(R||r(e,u),x!==w&&r(e,n),h&&e.length!==y&&r(e,"length"),!0):!1},deleteProperty(e,n){const t=Object.hasOwn(e,n),s=Reflect.deleteProperty(e,n);return s&&t&&(r(e,n),r(e,u)),s},has(e,n){return p(e,n),Reflect.has(e,n)},ownKeys(e){return p(e,u),Reflect.ownKeys(e)}};function j(e){if(e===null||typeof e!="object"||e[i])return e;const n=a.get(e);if(n)return n;const t=new Proxy(e,M);return a.set(e,t),t}function O(e){const n={deps:[],disposed:!1,run(){if(n.disposed)return;b(n);const t=o;o=n;try{return e()}finally{o=t}},stop(){n.disposed=!0,b(n)}};return c?.push(n),n.run(),n}function S(e){const n=c,t=c=[];try{e()}finally{c=n}return t}function b(e){for(const n of e.deps)n.delete(e);e.deps.length=0}export{S as collect,O as effect,j as reactive};
+const RAW = /* @__PURE__ */ Symbol("raw");
+const ITERATE = /* @__PURE__ */ Symbol("iterate");
+const targetMap = /* @__PURE__ */ new WeakMap();
+const proxies = /* @__PURE__ */ new WeakMap();
+let active = null;
+let collecting = null;
+const queue = /* @__PURE__ */ new Set();
+let scheduled = false;
+function track(target, key) {
+  if (!active) return;
+  let keys = targetMap.get(target);
+  if (!keys) targetMap.set(target, keys = /* @__PURE__ */ new Map());
+  let subs = keys.get(key);
+  if (!subs) keys.set(key, subs = /* @__PURE__ */ new Set());
+  if (subs.has(active)) return;
+  subs.add(active);
+  active.deps.push(subs);
+}
+function trigger(target, key) {
+  const subs = targetMap.get(target)?.get(key);
+  if (!subs) return;
+  for (const e of subs) {
+    if (e !== active && !e.disposed) queue.add(e);
+  }
+  if (queue.size && !scheduled) {
+    scheduled = true;
+    queueMicrotask(flush);
+  }
+}
+function flush() {
+  scheduled = false;
+  const runs = [...queue];
+  queue.clear();
+  for (const e of runs) if (!e.disposed) e.run();
+}
+const handlers = {
+  get(target, key, receiver) {
+    if (key === RAW) return target;
+    const value = Reflect.get(target, key, receiver);
+    if (typeof key === "symbol") return value;
+    track(target, key);
+    return reactive(value);
+  },
+  set(target, key, value, receiver) {
+    const isArray = Array.isArray(target);
+    const wasLength = isArray ? target.length : 0;
+    const had = Object.hasOwn(target, key);
+    const old = target[key];
+    const raw = value !== null && typeof value === "object" ? value[RAW] ?? value : value;
+    if (!Reflect.set(target, key, raw, receiver)) return false;
+    if (!had) trigger(target, ITERATE);
+    if (old !== raw) trigger(target, key);
+    if (isArray && target.length !== wasLength) trigger(target, "length");
+    return true;
+  },
+  deleteProperty(target, key) {
+    const had = Object.hasOwn(target, key);
+    const ok = Reflect.deleteProperty(target, key);
+    if (ok && had) {
+      trigger(target, key);
+      trigger(target, ITERATE);
+    }
+    return ok;
+  },
+  has(target, key) {
+    track(target, key);
+    return Reflect.has(target, key);
+  },
+  ownKeys(target) {
+    track(target, ITERATE);
+    return Reflect.ownKeys(target);
+  }
+};
+function reactive(value) {
+  if (value === null || typeof value !== "object") return value;
+  if (value[RAW]) return value;
+  const cached = proxies.get(value);
+  if (cached) return cached;
+  const proxy = new Proxy(value, handlers);
+  proxies.set(value, proxy);
+  return proxy;
+}
+function effect(fn) {
+  const e = {
+    deps: [],
+    disposed: false,
+    run() {
+      if (e.disposed) return;
+      cleanup(e);
+      const prev = active;
+      active = e;
+      try {
+        return fn();
+      } finally {
+        active = prev;
+      }
+    },
+    stop() {
+      e.disposed = true;
+      cleanup(e);
+    }
+  };
+  collecting?.push(e);
+  e.run();
+  return e;
+}
+function collect(fn) {
+  const previous = collecting;
+  const created = collecting = [];
+  try {
+    fn();
+  } finally {
+    collecting = previous;
+  }
+  return created;
+}
+function cleanup(e) {
+  for (const subs of e.deps) subs.delete(e);
+  e.deps.length = 0;
+}
+export {
+  collect,
+  effect,
+  reactive
+};

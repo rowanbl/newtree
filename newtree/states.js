@@ -1,1 +1,70 @@
-import{reactive as i,collect as p}from"./reactive.js";import{env as h}from"virtual:core/env";const c={},u=new Map,d=new Set;function n(e,t){return d.add(e),c[e]=i(t),c[e]}n("route",{path:"/",params:{}}),n("error",{status:0,message:"",details:null}),n("env",h);function $(e){const t=[];for(const[s,r]of Object.entries(e)){const o=s.split("/").pop().replace(/\.[^.]+$/,"");if(!r||r.default===void 0)throw new Error(`[core] ${s} must \`export default\` an object, or a function returning one`);if(typeof r.default=="function"){u.set(o,r.default),y(o);continue}t.push(n(o,r.default))}for(const s of t)l(s)}function j(e,t){const s=Object.create(e),r=[];for(const o of t){const a=u.get(o);if(!a)throw new Error(g(o));const f=i(a());Object.defineProperty(s,o,{value:f,enumerable:!0,configurable:!0}),r.push(...p(()=>l(f)))}return{states:s,dispose(){for(const o of r)o.stop()}}}function l(e){try{e.ready?.()?.catch?.(t=>console.error("[core] ready() failed",t))}catch(t){console.error("[core] ready() failed",t)}}function y(e){Object.defineProperty(c,e,{configurable:!0,get(){throw new Error(`[core] states.${e} is scoped \u2014 add states="${e}" to an ancestor element`)}})}const g=e=>d.has(e)?`[core] states="${e}" needs a factory: ${e}.js should \`export default () => ({ ... })\``:`[core] states="${e}" \u2014 no ${e}.js in the states directory`;export{j as createScope,n as defineState,$ as registerStates,c as states};
+import { reactive, collect } from "./reactive.js";
+import { env } from "virtual:core/env";
+const states = {};
+const factories = /* @__PURE__ */ new Map();
+const singletons = /* @__PURE__ */ new Set();
+function defineState(name, value) {
+  singletons.add(name);
+  states[name] = reactive(value);
+  return states[name];
+}
+defineState("route", { path: "/", params: {} });
+defineState("error", { status: 0, message: "", details: null });
+defineState("env", env);
+function registerStates(modules) {
+  const created = [];
+  for (const [file, mod] of Object.entries(modules)) {
+    const name = file.split("/").pop().replace(/\.[^.]+$/, "");
+    if (!mod || mod.default === void 0) {
+      throw new Error(`[core] ${file} must \`export default\` an object, or a function returning one`);
+    }
+    if (typeof mod.default === "function") {
+      factories.set(name, mod.default);
+      guard(name);
+      continue;
+    }
+    created.push(defineState(name, mod.default));
+  }
+  for (const state of created) ready(state);
+}
+function createScope(parent, names) {
+  const scoped = Object.create(parent);
+  const effects = [];
+  for (const name of names) {
+    const factory = factories.get(name);
+    if (!factory) throw new Error(missing(name));
+    const state = reactive(factory());
+    Object.defineProperty(scoped, name, { value: state, enumerable: true, configurable: true });
+    effects.push(...collect(() => ready(state)));
+  }
+  return {
+    states: scoped,
+    dispose() {
+      for (const e of effects) e.stop();
+    }
+  };
+}
+function ready(state) {
+  try {
+    state.ready?.()?.catch?.((e) => console.error("[core] ready() failed", e));
+  } catch (e) {
+    console.error("[core] ready() failed", e);
+  }
+}
+function guard(name) {
+  Object.defineProperty(states, name, {
+    configurable: true,
+    get() {
+      throw new Error(
+        `[core] states.${name} is scoped \u2014 add states="${name}" to an ancestor element`
+      );
+    }
+  });
+}
+const missing = (name) => singletons.has(name) ? `[core] states="${name}" needs a factory: ${name}.js should \`export default () => ({ ... })\`` : `[core] states="${name}" \u2014 no ${name}.js in the states directory`;
+export {
+  createScope,
+  defineState,
+  registerStates,
+  states
+};

@@ -1,6 +1,207 @@
-import f from"node:fs";import o from"node:path";import{loadEnv as B}from"vite";import{compile as I}from"./compiler.js";const j="virtual:core/routes",O="virtual:core/states",N="virtual:core/assets",b="virtual:core/env";function F(a={}){const d=a.views??"src/views",h=a.states??"src/js/states",m=a.viewExtension??".view",P=a.runtime??"/src/core/runtime.js",w=a.assets??{icons:"src/icons"},J=a.publicEnv??["API_URL","PROJECT_URL","APP_URL","APP_ENV"],x=a.sources??[{dir:a.components??"src/components",ext:a.componentExtension??".comp"},{dir:a.layouts??"src/layouts",ext:a.layoutExtension??".layout"}],A=x.map(e=>e.ext),S=e=>e.endsWith(m)||A.some(t=>e.endsWith(t));let c=process.cwd(),p=null,E=null,v=null;function k(){const e=o.resolve(c,h);return f.existsSync(e)?new Set(f.readdirSync(e).filter(t=>t.endsWith(".js")).map(t=>t.slice(0,-3))):new Set}function R(){return E=k(),E}function _(e){const t=e.indexOf("/"),s=w[e.slice(0,t)];if(!s||t<1)return!1;const n=o.resolve(c,s),r=o.resolve(n,e.slice(t+1));return(r===n||r.startsWith(n+o.sep))&&f.existsSync(r)}function W(){const e=o.resolve(c,d);if(!f.existsSync(e))return[];const t=[],s=n=>{for(const r of f.readdirSync(n,{withFileTypes:!0})){const i=o.join(n,r.name);r.isDirectory()?s(i):r.name.endsWith(m)&&t.push(i)}};return s(e),t}function T(e){let s=o.relative(o.resolve(c,d),e).split(o.sep).join("/").slice(0,-m.length);s=s==="index"?"":s.replace(/\/index$/,""),s=s?`/${s}`:"/";const n=[],r=s.split("/").filter(Boolean).map(i=>/^\[[^\]]+\]$/.test(i)?(n.push(i.slice(1,-1)),"([^/]+)"):i.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("/");return{keys:n,source:`^/${r}/?$`,score:s.split("/").filter(Boolean).reduce((i,u)=>i+(u.startsWith("[")?1:2),0)}}function U(){const e=new Map;for(const t of x){const s=o.resolve(c,t.dir);if(!f.existsSync(s))continue;const n=r=>{for(const i of f.readdirSync(r,{withFileTypes:!0})){const u=o.join(r,i.name);if(i.isDirectory()){n(u);continue}if(!i.name.endsWith(t.ext))continue;const g=i.name.slice(0,-t.ext.length),l=e.get(g);if(l)throw new Error(`[core] two files claim <${g}>:
-  ${y(l)}
-  ${y(u)}`);e.set(g,u)}};n(s)}return e}const y=e=>"/"+o.relative(c,e).split(o.sep).join("/");function V(e){p?.has(e)||(p=U());const t=p.get(e);return t?y(t):null}return{name:"core",configResolved(e){c=e.root,p=null;const t=B(e.mode,c,""),s=Object.fromEntries(J.flatMap(r=>t[r]===void 0?[]:[[r,t[r]]])),n=e.command==="serve"||s.APP_ENV==="demo";v={mode:e.mode,values:s,flags:{development:e.command==="serve",production:e.command==="build",demo:n}}},resolveId(e){if(e===j||e===O||e===N||e===b)return"\0"+e},load(e){if(e==="\0"+j){const t=W(),s=`/${d.replace(/^\/+|\/+$/g,"")}/`,n=l=>s+o.relative(o.resolve(c,d),l).split(o.sep).join("/"),r=l=>o.relative(o.resolve(c,d,"errors"),l)&&l.startsWith(o.resolve(c,d,"errors")+o.sep),i=t.find(l=>o.basename(l,m)==="_shell"),u=t.filter(l=>!r(l)&&o.basename(l,m)!=="_shell").map(l=>{const $=T(l);return`{ load: () => import(${JSON.stringify(n(l))}), re: new RegExp(${JSON.stringify($.source)}), keys: ${JSON.stringify($.keys)}, score: ${$.score} }`}),g=t.filter(r).map(l=>{const $=o.basename(l,m);return`${JSON.stringify($)}: () => import(${JSON.stringify(n(l))})`});return`export default { routes: [${u.join(",")}], errors: {${g.join(",")}}, shell: ${i?`() => import(${JSON.stringify(n(i))})`:"null"} }`}if(e==="\0"+O)return[`const mods = import.meta.glob(${JSON.stringify(`/${h}/*.js`)}, { eager: true })`,"export default mods"].join(`
-`);if(e==="\0"+N)return[`const groups = { ${Object.entries(w).map(([s,n])=>{const r=`/${n.replace(/^\/+|\/+$/g,"")}/`,i=`${r}**/*.svg`;return`${JSON.stringify(s)}: { root: ${JSON.stringify(r)}, files: import.meta.glob(${JSON.stringify(i)}, { query: '?url', import: 'default' }), raw: import.meta.glob(${JSON.stringify(i)}, { query: '?raw', import: 'default' }) }`}).join(", ")} }`,"export function loadAsset(id) {","  const slash = id.indexOf('/')","  const group = groups[id.slice(0, slash)]","  const path = id.slice(slash + 1)","  const load = group?.files[`${group.root}${path}`]","  return load ? load() : Promise.reject(new Error(`unknown asset: ${id}`))","}","export function loadAssetRaw(id) {","  const slash = id.indexOf('/')","  const group = groups[id.slice(0, slash)]","  const path = id.slice(slash + 1)","  const load = group?.raw[`${group.root}${path}`]","  return load ? load() : Promise.reject(new Error(`unknown asset: ${id}`))","}"].join(`
-`);if(e==="\0"+b)return[`const config = ${JSON.stringify(v??{mode:"development",values:{},flags:{development:!0,production:!1,demo:!0}})}`,"export const env = Object.freeze({","  mode: config.mode, values: Object.freeze(config.values),","  get: (key, fallback = undefined) => config.values[key] ?? fallback,","  is: (type) => Boolean(config.flags[type]) || config.values.APP_ENV === type,","})"].join(`
-`)},transform(e,t){const s=t.split("?")[0];return S(s)?{code:I(e,{filename:o.relative(c,s).split(o.sep).join("/"),runtime:P,resolve:V,stateNames:R(),assetExists:_,envIs:v?.flags.production?n=>!!v.flags[n]||v.values.APP_ENV===n:null}),map:null}:null},handleHotUpdate(e){if(S(e.file))return p=null,e.server.ws.send({type:"full-reload"}),[]}}}export{F as default};
+import fs from "node:fs";
+import path from "node:path";
+import { loadEnv } from "vite";
+import { compile } from "./compiler.js";
+const ROUTES = "virtual:core/routes";
+const STATES = "virtual:core/states";
+const ASSETS = "virtual:core/assets";
+const ENV = "virtual:core/env";
+function core(options = {}) {
+  const views = options.views ?? "src/views";
+  const states = options.states ?? "src/js/states";
+  const viewExt = options.viewExtension ?? ".view";
+  const runtime = options.runtime ?? "/src/core/runtime.js";
+  const assets = options.assets ?? { icons: "src/icons" };
+  const publicEnv = options.publicEnv ?? ["API_URL", "PROJECT_URL", "APP_URL", "APP_ENV"];
+  const sources = options.sources ?? [
+    { dir: options.components ?? "src/components", ext: options.componentExtension ?? ".comp" },
+    { dir: options.layouts ?? "src/layouts", ext: options.layoutExtension ?? ".layout" }
+  ];
+  const tagExtensions = sources.map((s) => s.ext);
+  const compiled = (file) => file.endsWith(viewExt) || tagExtensions.some((e) => file.endsWith(e));
+  let root = process.cwd();
+  let index = null;
+  let stateIndex = null;
+  let environment = null;
+  function scanStates() {
+    const dir = path.resolve(root, states);
+    if (!fs.existsSync(dir)) return /* @__PURE__ */ new Set();
+    return new Set(
+      fs.readdirSync(dir).filter((f) => f.endsWith(".js")).map((f) => f.slice(0, -3))
+    );
+  }
+  function stateNames() {
+    stateIndex = scanStates();
+    return stateIndex;
+  }
+  function assetExists(id) {
+    const slash = id.indexOf("/");
+    const group = assets[id.slice(0, slash)];
+    if (!group || slash < 1) return false;
+    const base = path.resolve(root, group);
+    const target = path.resolve(base, id.slice(slash + 1));
+    return (target === base || target.startsWith(base + path.sep)) && fs.existsSync(target);
+  }
+  function viewFiles() {
+    const dir = path.resolve(root, views);
+    if (!fs.existsSync(dir)) return [];
+    const found = [];
+    const walk = (current) => {
+      for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+        const full = path.join(current, entry.name);
+        if (entry.isDirectory()) walk(full);
+        else if (entry.name.endsWith(viewExt)) found.push(full);
+      }
+    };
+    walk(dir);
+    return found;
+  }
+  function routeMeta(file) {
+    const relative = path.relative(path.resolve(root, views), file).split(path.sep).join("/");
+    let route = relative.slice(0, -viewExt.length);
+    route = route === "index" ? "" : route.replace(/\/index$/, "");
+    route = route ? `/${route}` : "/";
+    const keys = [];
+    const source = route.split("/").filter(Boolean).map((part) => {
+      if (/^\[[^\]]+\]$/.test(part)) {
+        keys.push(part.slice(1, -1));
+        return "([^/]+)";
+      }
+      return part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }).join("/");
+    return { keys, source: `^/${source}/?$`, score: route.split("/").filter(Boolean).reduce((n, part) => n + (part.startsWith("[") ? 1 : 2), 0) };
+  }
+  function scan() {
+    const found = /* @__PURE__ */ new Map();
+    for (const source of sources) {
+      const dir = path.resolve(root, source.dir);
+      if (!fs.existsSync(dir)) continue;
+      const walk = (current) => {
+        for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+          const full = path.join(current, entry.name);
+          if (entry.isDirectory()) {
+            walk(full);
+            continue;
+          }
+          if (!entry.name.endsWith(source.ext)) continue;
+          const name = entry.name.slice(0, -source.ext.length);
+          const previous = found.get(name);
+          if (previous) {
+            throw new Error(`[core] two files claim <${name}>:
+  ${rel(previous)}
+  ${rel(full)}`);
+          }
+          found.set(name, full);
+        }
+      };
+      walk(dir);
+    }
+    return found;
+  }
+  const rel = (file) => "/" + path.relative(root, file).split(path.sep).join("/");
+  function resolveComponent(name) {
+    if (!index?.has(name)) index = scan();
+    const file = index.get(name);
+    return file ? rel(file) : null;
+  }
+  return {
+    name: "core",
+    configResolved(config) {
+      root = config.root;
+      index = null;
+      const values = loadEnv(config.mode, root, "");
+      const selected = Object.fromEntries(publicEnv.flatMap((key) => values[key] === void 0 ? [] : [[key, values[key]]]));
+      const demo = config.command === "serve" || selected.APP_ENV === "demo";
+      environment = {
+        mode: config.mode,
+        values: selected,
+        flags: { development: config.command === "serve", production: config.command === "build", demo }
+      };
+    },
+    resolveId(id) {
+      if (id === ROUTES || id === STATES || id === ASSETS || id === ENV) return "\0" + id;
+    },
+    load(id) {
+      if (id === "\0" + ROUTES) {
+        const files = viewFiles();
+        const sourceRoot = `/${views.replace(/^\/+|\/+$/g, "")}/`;
+        const viewPath = (file) => sourceRoot + path.relative(path.resolve(root, views), file).split(path.sep).join("/");
+        const isError = (file) => path.relative(path.resolve(root, views, "errors"), file) && file.startsWith(path.resolve(root, views, "errors") + path.sep);
+        const shell = files.find((file) => path.basename(file, viewExt) === "_shell");
+        const routes = files.filter((file) => !isError(file) && path.basename(file, viewExt) !== "_shell").map((file) => {
+          const meta = routeMeta(file);
+          return `{ load: () => import(${JSON.stringify(viewPath(file))}), re: new RegExp(${JSON.stringify(meta.source)}), keys: ${JSON.stringify(meta.keys)}, score: ${meta.score} }`;
+        });
+        const errors = files.filter(isError).map((file) => {
+          const name = path.basename(file, viewExt);
+          return `${JSON.stringify(name)}: () => import(${JSON.stringify(viewPath(file))})`;
+        });
+        return `export default { routes: [${routes.join(",")}], errors: {${errors.join(",")}}, shell: ${shell ? `() => import(${JSON.stringify(viewPath(shell))})` : "null"} }`;
+      }
+      if (id === "\0" + STATES) {
+        return [
+          `const mods = import.meta.glob(${JSON.stringify(`/${states}/*.js`)}, { eager: true })`,
+          `export default mods`
+        ].join("\n");
+      }
+      if (id === "\0" + ASSETS) {
+        const groups = Object.entries(assets).map(([name, dir]) => {
+          const root2 = `/${dir.replace(/^\/+|\/+$/g, "")}/`;
+          const pattern = `${root2}**/*.svg`;
+          return `${JSON.stringify(name)}: { root: ${JSON.stringify(root2)}, files: import.meta.glob(${JSON.stringify(pattern)}, { query: '?url', import: 'default' }), raw: import.meta.glob(${JSON.stringify(pattern)}, { query: '?raw', import: 'default' }) }`;
+        });
+        return [
+          `const groups = { ${groups.join(", ")} }`,
+          "export function loadAsset(id) {",
+          "  const slash = id.indexOf('/')",
+          "  const group = groups[id.slice(0, slash)]",
+          "  const path = id.slice(slash + 1)",
+          "  const load = group?.files[`${group.root}${path}`]",
+          "  return load ? load() : Promise.reject(new Error(`unknown asset: ${id}`))",
+          "}",
+          "export function loadAssetRaw(id) {",
+          "  const slash = id.indexOf('/')",
+          "  const group = groups[id.slice(0, slash)]",
+          "  const path = id.slice(slash + 1)",
+          "  const load = group?.raw[`${group.root}${path}`]",
+          "  return load ? load() : Promise.reject(new Error(`unknown asset: ${id}`))",
+          "}"
+        ].join("\n");
+      }
+      if (id === "\0" + ENV) {
+        return [
+          `const config = ${JSON.stringify(environment ?? { mode: "development", values: {}, flags: { development: true, production: false, demo: true } })}`,
+          "export const env = Object.freeze({",
+          "  mode: config.mode, values: Object.freeze(config.values),",
+          "  get: (key, fallback = undefined) => config.values[key] ?? fallback,",
+          "  is: (type) => Boolean(config.flags[type]) || config.values.APP_ENV === type,",
+          "})"
+        ].join("\n");
+      }
+    },
+    transform(code, id) {
+      const file = id.split("?")[0];
+      if (!compiled(file)) return null;
+      return {
+        code: compile(code, {
+          filename: path.relative(root, file).split(path.sep).join("/"),
+          runtime,
+          resolve: resolveComponent,
+          stateNames: stateNames(),
+          assetExists,
+          envIs: environment?.flags.production ? (type) => Boolean(environment.flags[type]) || environment.values.APP_ENV === type : null
+        }),
+        map: null
+      };
+    },
+    handleHotUpdate(ctx) {
+      if (!compiled(ctx.file)) return;
+      index = null;
+      ctx.server.ws.send({ type: "full-reload" });
+      return [];
+    }
+  };
+}
+export {
+  core as default
+};
