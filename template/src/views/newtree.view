@@ -1,0 +1,3 @@
+<pre class="border"><code>curl -fsSL https://rowanblaed.com/get-newtree.sh | sh
+newtree create
+npm run dev</code></pre>
