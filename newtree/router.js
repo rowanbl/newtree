@@ -2,7 +2,7 @@ import { states } from "./states.js";
 import { emitRoute } from "./lifecycle.js";
 let root = null;
 let routes = [];
-let errors = /* @__PURE__ */ new Map();
+let errors = new Map();
 let outlet = null;
 let current = null;
 let token = 0;

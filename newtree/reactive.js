@@ -1,17 +1,17 @@
-const RAW = /* @__PURE__ */ Symbol("raw");
-const ITERATE = /* @__PURE__ */ Symbol("iterate");
-const targetMap = /* @__PURE__ */ new WeakMap();
-const proxies = /* @__PURE__ */ new WeakMap();
+const RAW = Symbol("raw");
+const ITERATE = Symbol("iterate");
+const targetMap = new WeakMap();
+const proxies = new WeakMap();
 let active = null;
 let collecting = null;
-const queue = /* @__PURE__ */ new Set();
+const queue = new Set();
 let scheduled = false;
 function track(target, key) {
   if (!active) return;
   let keys = targetMap.get(target);
-  if (!keys) targetMap.set(target, keys = /* @__PURE__ */ new Map());
+  if (!keys) targetMap.set(target, keys = new Map());
   let subs = keys.get(key);
-  if (!subs) keys.set(key, subs = /* @__PURE__ */ new Set());
+  if (!subs) keys.set(key, subs = new Set());
   if (subs.has(active)) return;
   subs.add(active);
   active.deps.push(subs);

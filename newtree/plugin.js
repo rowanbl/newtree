@@ -27,7 +27,7 @@ function core(options = {}) {
   let environment = null;
   function scanStates() {
     const dir = path.resolve(root, states);
-    if (!fs.existsSync(dir)) return /* @__PURE__ */ new Set();
+    if (!fs.existsSync(dir)) return new Set();
     return new Set(
       fs.readdirSync(dir).filter((f) => f.endsWith(".js")).map((f) => f.slice(0, -3))
     );
@@ -74,7 +74,7 @@ function core(options = {}) {
     return { keys, source: `^/${source}/?$`, score: route.split("/").filter(Boolean).reduce((n, part) => n + (part.startsWith("[") ? 1 : 2), 0) };
   }
   function scan() {
-    const found = /* @__PURE__ */ new Map();
+    const found = new Map();
     for (const source of sources) {
       const dir = path.resolve(root, source.dir);
       if (!fs.existsSync(dir)) continue;

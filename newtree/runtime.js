@@ -3,18 +3,11 @@ import { states as globalStates, createScope } from "./states.js";
 import { loadAsset, loadAssetRaw } from "virtual:core/assets";
 import { mountBehavior } from "./behaviors.js";
 const EMPTY = Object.freeze({});
-const AS_PROPERTY = /* @__PURE__ */ new Set(["value", "checked", "selected", "indeterminate"]);
+const AS_PROPERTY = new Set(["value", "checked", "selected", "indeterminate"]);
 function view(def) {
   let tpl = null;
   return {
-    // True when the file places {:class} itself, so the caller's class is
-    // already positioned and must not be merged in a second time.
     usesClass: !!def.usesClass,
-    /**
-     * @param scope   loop variables in lexical scope (`each` fills this)
-     * @param params  route parameters
-     * @param opts    { states, props, content, contentScope, contentParams, contentProps }
-     */
     create(scope = {}, params = {}, opts = {}) {
       const states = opts.states ?? globalStates;
       if (!tpl) {
@@ -288,8 +281,6 @@ function component(b, anchor, scope, params, props, effects, states) {
   }
   const slots = createSlots(b.slots, b.content, scope, params, props, states);
   const inst = child.create({}, params, {
-    // A component sees the states in force where it was written, so <Editor />
-    // inside states="editor" picks up that row's instance.
     states,
     props: own,
     content: b.content,

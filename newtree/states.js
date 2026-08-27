@@ -1,8 +1,8 @@
 import { reactive, collect } from "./reactive.js";
 import { env } from "virtual:core/env";
 const states = {};
-const factories = /* @__PURE__ */ new Map();
-const singletons = /* @__PURE__ */ new Set();
+const factories = new Map();
+const singletons = new Set();
 function defineState(name, value) {
   singletons.add(name);
   states[name] = reactive(value);

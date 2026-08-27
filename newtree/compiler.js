@@ -1,5 +1,5 @@
-const RAW_TEXT = /* @__PURE__ */ new Set(["script", "style", "textarea", "title"]);
-const VOID = /* @__PURE__ */ new Set([
+const RAW_TEXT = new Set(["script", "style", "textarea", "title"]);
+const VOID = new Set([
   "area",
   "base",
   "br",
@@ -23,7 +23,7 @@ function compile(source, {
   assetExists,
   envIs
 } = {}) {
-  const file = { filename, resolve, stateNames, assetExists, envIs, components: /* @__PURE__ */ new Map(), usesClass: false };
+  const file = { filename, resolve, stateNames, assetExists, envIs, components: new Map(), usesClass: false };
   const body = gen(parse(blade(source)), [], file, true);
   const imports = [...file.components].map(([name, spec]) => `import ${name} from ${JSON.stringify(spec)}`);
   return [
