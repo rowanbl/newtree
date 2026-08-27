@@ -237,6 +237,7 @@ function emitElement(el, ctx) {
   let attrs = "";
   const binds = [];
   let svgFallback = null;
+  let cycleDelay = null;
   for (const a of el.attrs) {
     if (isEvent(a)) {
       binds.push({ k: "e", n: eventName(a.name), f: fn(a.value, ctx, true) });
@@ -248,6 +249,8 @@ function emitElement(el, ctx) {
       binds.push({ k: "svg", f: fn(attrExpr(a.value, ctx), ctx) });
     } else if (a.name === "cycle") {
       binds.push({ k: "cycle", f: fn(attrExpr(a.value, ctx), ctx) });
+    } else if (a.name === "cycle-delay") {
+      cycleDelay = fn(attrExpr(a.value, ctx), ctx);
     } else if (a.name === "lazy") {
       binds.push({ k: "lazy", f: fn(attrExpr(a.value, ctx), ctx) });
     } else if (a.value != null && a.value.includes("{")) {
@@ -258,6 +261,7 @@ function emitElement(el, ctx) {
   }
   for (const bind of binds) {
     if (bind.k === "svg" && svgFallback) bind.g = svgFallback;
+    if (bind.k === "cycle" && cycleDelay) bind.d = cycleDelay;
   }
   let marker = "";
   if (binds.length) {
@@ -265,7 +269,8 @@ function emitElement(el, ctx) {
     marker = ` data-v="${e}"`;
     for (const b of binds) {
       const fallback = b.g ? `, g: ${b.g}` : "";
-      ctx.parts.push(`{ k: '${b.k}', e: ${e}, n: ${JSON.stringify(b.n)}, f: ${b.f}${fallback} }`);
+      const delay = b.d ? `, d: ${b.d}` : "";
+      ctx.parts.push(`{ k: '${b.k}', e: ${e}, n: ${JSON.stringify(b.n)}, f: ${b.f}${fallback}${delay} }`);
     }
   }
   ctx.html += `<${el.tag}${attrs}${marker}>`;

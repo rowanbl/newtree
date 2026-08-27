@@ -103,6 +103,7 @@ function view(def) {
           effects.push(effect(() => {
             stop();
             const words = String(call(p.f) ?? "").split("|").map((word) => word.trim()).filter(Boolean);
+            const delay = Math.max(0, Number(p.d ? call(p.d) : 2200) || 2200);
             if (!words.length) {
               el.replaceChildren();
               return;
@@ -124,7 +125,7 @@ function view(def) {
             };
             const resume = () => {
               pause();
-              if (!document.hidden && el.isConnected) timer = setInterval(advance, 2200);
+              if (!document.hidden && el.isConnected) timer = setInterval(advance, delay);
             };
             onVisibility = resume;
             document.addEventListener("visibilitychange", onVisibility);
