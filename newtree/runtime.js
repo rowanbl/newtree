@@ -286,7 +286,7 @@ function component(b, anchor, scope, params, props, effects, states) {
   for (const p of b.props) {
     Object.defineProperty(own, p.n, { enumerable: true, get: () => call(p.f) });
   }
-  const slots = createSlots(b.slots, scope, params, props, states);
+  const slots = createSlots(b.slots, b.content, scope, params, props, states);
   const inst = child.create({}, params, {
     // A component sees the states in force where it was written, so <Editor />
     // inside states="editor" picks up that row's instance.
@@ -332,8 +332,8 @@ function trimPreSpacer(anchor) {
   const spacer = anchor.previousSibling;
   if (anchor.parentElement?.closest("pre") && spacer?.nodeType === Node.TEXT_NODE && spacer.nodeValue === "\n" && spacer.previousSibling?.nodeType === Node.ELEMENT_NODE) spacer.remove();
 }
-function createSlots(definitions = [], scope, params, props, states) {
-  const entries = definitions.map((definition) => {
+function createSlots(definitions = [], content, scope, params, props, states) {
+  const createSlot = (definition) => {
     const own = {};
     let inst = null;
     for (const prop of definition.props) {
@@ -351,9 +351,12 @@ function createSlots(definitions = [], scope, params, props, states) {
         inst?.destroy();
       }
     };
-  });
+  };
+  const entries = definitions.map(createSlot);
+  const contentSlot = content ? createSlot({ name: "content", props: [], v: content }) : null;
   return {
     all: entries,
+    content: contentSlot,
     get(name) {
       return entries.filter((entry) => entry.name === name);
     },
