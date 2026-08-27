@@ -286,6 +286,7 @@ function component(b, anchor, scope, params, props, effects, states) {
   for (const p of b.props) {
     Object.defineProperty(own, p.n, { enumerable: true, get: () => call(p.f) });
   }
+  const slots = createSlots(b.slots, scope, params, props, states);
   const inst = child.create({}, params, {
     // A component sees the states in force where it was written, so <Editor />
     // inside states="editor" picks up that row's instance.
@@ -295,9 +296,12 @@ function component(b, anchor, scope, params, props, effects, states) {
     contentScope: scope,
     contentParams: params,
     contentProps: props,
-    contentStates: states
+    contentStates: states,
+    slots
   });
   anchor.before(...inst.nodes);
+  trimPreSpacer(anchor);
+  queueMicrotask(() => trimPreSpacer(anchor));
   const root = inst.nodes.find((n) => n.nodeType === Node.ELEMENT_NODE);
   if (root) {
     for (const ev of b.events) {
@@ -314,12 +318,47 @@ function component(b, anchor, scope, params, props, effects, states) {
       }));
     }
   }
-  const cleanup = root ? mountBehavior(b.name, root, { states, params, props }) : null;
+  const cleanup = root ? mountBehavior(b.name, root, { states, params, props: own, slots }) : null;
   return {
     nodes: inst.nodes,
     destroy() {
       cleanup?.();
+      slots.destroy();
       inst.destroy();
+    }
+  };
+}
+function trimPreSpacer(anchor) {
+  const spacer = anchor.previousSibling;
+  if (anchor.parentElement?.closest("pre") && spacer?.nodeType === Node.TEXT_NODE && spacer.nodeValue === "\n" && spacer.previousSibling?.nodeType === Node.ELEMENT_NODE) spacer.remove();
+}
+function createSlots(definitions = [], scope, params, props, states) {
+  const entries = definitions.map((definition) => {
+    const own = {};
+    let inst = null;
+    for (const prop of definition.props) {
+      Object.defineProperty(own, prop.n, { enumerable: true, get: () => prop.f(states, scope, void 0, params, props) });
+    }
+    return {
+      name: definition.name,
+      props: own,
+      mount(target) {
+        if (!inst) inst = definition.v.create(scope, params, { states, props });
+        target.replaceChildren(...inst.nodes);
+        return this;
+      },
+      destroy() {
+        inst?.destroy();
+      }
+    };
+  });
+  return {
+    all: entries,
+    get(name) {
+      return entries.filter((entry) => entry.name === name);
+    },
+    destroy() {
+      entries.forEach((entry) => entry.destroy());
     }
   };
 }

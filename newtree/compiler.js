@@ -186,11 +186,7 @@ function emitText(str, ctx) {
 }
 function emitElement(el, ctx) {
   if (el.subcomponent) {
-    el = {
-      ...el,
-      name: "newtree-slot",
-      attrs: [...el.attrs, { name: "data-subcomponent", value: el.subcomponent }]
-    };
+    throw fail(ctx, `<(${el.subcomponent})> must be a direct child of a component`);
   }
   const cond = take(el, "if");
   if (cond !== void 0) {
@@ -335,12 +331,20 @@ function emitComponent(el, ctx) {
     if (a.name === "class") cls = source;
     props.push(`{ n: ${JSON.stringify(a.name)}, f: ${source} }`);
   }
-  const content = el.children.length ? gen(el.children, ctx.scope, ctx.file) : "null";
+  const slots = el.children.filter((child) => child.subcomponent);
+  const children = slots.length
+    ? el.children.filter((child) => !child.subcomponent && (child.text === void 0 || !/^\s*$/.test(child.text)))
+    : el.children;
+  const content = children.length ? gen(children, ctx.scope, ctx.file) : "null";
   const i = ctx.blocks.length;
   ctx.html += `<!--#${i}-->`;
   ctx.blocks.push(
-    `{ k: 'comp', name: ${JSON.stringify(el.tag)}, v: () => ${el.tag}, props: [${props.join(", ")}], events: [${events.join(", ")}], cls: ${cls}, content: ${content} }`
+    `{ k: 'comp', name: ${JSON.stringify(el.tag)}, v: () => ${el.tag}, props: [${props.join(", ")}], events: [${events.join(", ")}], cls: ${cls}, content: ${content}, slots: [${slots.map((slot) => emitSlot(slot, ctx)).join(", ")}] }`
   );
+}
+function emitSlot(el, ctx) {
+  const props = el.attrs.map((attr) => `{ n: ${JSON.stringify(attr.name)}, f: ${fn(attrExpr(attr.value, ctx), ctx)} }`);
+  return `{ name: ${JSON.stringify(el.subcomponent)}, props: [${props.join(", ")}], v: ${gen(el.children, ctx.scope, ctx.file)} }`;
 }
 function fn(expr, ctx, statement = false) {
   for (const [, , name] of expr.matchAll(/(^|[^\w$.])states\s*\.\s*([A-Za-z_$][\w$]*)/g)) {
