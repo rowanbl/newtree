@@ -68,6 +68,7 @@ async function showError(mine, status, message, details = null) {
     const mod = await load();
     if (mine !== token) return;
     swap(mod.default.create({}, {}));
+    emitRoute({ path: location.pathname, params: states.route.params, root, outlet });
     scrollTo(0, 0);
   } catch (e) {
     console.error(e);
