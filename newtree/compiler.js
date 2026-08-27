@@ -57,7 +57,9 @@ function parse(src) {
     }
     if (src.startsWith("</", i)) {
       const gt = src.indexOf(">", i);
-      const name = src.slice(i + 2, gt < 0 ? src.length : gt).trim().toLowerCase();
+      const closing = src.slice(i + 2, gt < 0 ? src.length : gt).trim();
+      const subcomponent = /^\(([a-zA-Z][\w:.-]*)\)$/.exec(closing);
+      const name = subcomponent ? `(${subcomponent[1].toLowerCase()})` : closing.toLowerCase();
       i = gt < 0 ? src.length : gt + 1;
       for (let d = stack.length - 1; d > 0; d--) {
         if (stack[d].name === name) {
@@ -67,14 +69,17 @@ function parse(src) {
       }
       continue;
     }
-    const open = /^<([a-zA-Z][\w:.-]*)/.exec(src.slice(i));
+    const subcomponent = /^<\(([a-zA-Z][\w:.-]*)\)/.exec(src.slice(i));
+    const open = subcomponent ?? /^<([a-zA-Z][\w:.-]*)/.exec(src.slice(i));
     if (!open) {
       text("<");
       i++;
       continue;
     }
     const tag = open[1];
-    const el = { tag, name: tag.toLowerCase(), attrs: [], children: [] };
+    const el = subcomponent
+      ? { tag: "newtree-slot", name: `(${tag.toLowerCase()})`, subcomponent: tag, attrs: [], children: [] }
+      : { tag, name: tag.toLowerCase(), attrs: [], children: [] };
     let j = i + open[0].length;
     let selfClosing = false;
     while (j < src.length) {
@@ -180,6 +185,13 @@ function emitText(str, ctx) {
   }
 }
 function emitElement(el, ctx) {
+  if (el.subcomponent) {
+    el = {
+      ...el,
+      name: "newtree-slot",
+      attrs: [...el.attrs, { name: "data-subcomponent", value: el.subcomponent }]
+    };
+  }
   const cond = take(el, "if");
   if (cond !== void 0) {
     const i = ctx.blocks.length;
