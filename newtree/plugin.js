@@ -7,6 +7,14 @@ const STATES = "virtual:core/states";
 const ASSETS = "virtual:core/assets";
 const ENV = "virtual:core/env";
 const BEHAVIORS = "virtual:core/behaviors";
+
+function defaultChunks(id) {
+  const file = id.split(path.sep).join("/");
+
+  if (file.includes("/newtree/") || file.includes("virtual:core")) return "core";
+  if (file.includes("/src/components/") || file.includes("/src/js/")) return "shared";
+}
+
 function core(options = {}) {
   const views = options.views ?? "src/views";
   const states = options.states ?? "src/js/states";
@@ -108,6 +116,19 @@ function core(options = {}) {
   }
   return {
     name: "core",
+    config(config) {
+      if (config.build?.rollupOptions?.output?.manualChunks) return;
+
+      return {
+        build: {
+          rollupOptions: {
+            output: {
+              manualChunks: defaultChunks,
+            },
+          },
+        },
+      };
+    },
     configResolved(config) {
       root = config.root;
       index = null;

@@ -14,6 +14,8 @@ function start(el, manifest) {
   const shell = manifest.shell;
   addEventListener("popstate", render);
   document.addEventListener("click", intercept);
+  document.addEventListener("pointerover", prefetch);
+  document.addEventListener("focusin", prefetch);
   return Promise.resolve(shell?.()).then((mod) => {
     if (mod) useShell(mod.default);
     return render();
@@ -103,6 +105,17 @@ function intercept(event) {
   if (url.origin !== location.origin) return;
   event.preventDefault();
   navigate(url.pathname + url.search + url.hash);
+}
+
+function prefetch(event) {
+  const a = event.target.closest?.("a[href]");
+  if (!a || a.target || a.hasAttribute("download") || a.getAttribute("rel") === "external") return;
+  if (event.type === "pointerover" && a.contains(event.relatedTarget)) return;
+
+  const url = new URL(a.href, location.href);
+  if (url.origin !== location.origin) return;
+
+  routes.find((route) => route.re.test(url.pathname))?.load();
 }
 function params(route, path) {
   const match = route.re.exec(path) ?? [];
