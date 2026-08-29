@@ -11,6 +11,7 @@ const BEHAVIORS = "virtual:core/behaviors";
 function defaultChunks(id) {
   const file = id.split(path.sep).join("/");
 
+  if (file.includes("virtual:core/states") || file.includes("virtual:core/behaviors")) return "shared";
   if (file.includes("/newtree/") || file.includes("virtual:core")) return "core";
   if (file.includes("/src/components/") || file.includes("/src/js/")) return "shared";
 }
