@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Newtree text fixture</title>
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; font: 24px/1.25 system-ui, sans-serif; }
+    </style>
+  </head>
+  <body>
+    <script type="module">
+      import { cycleText, updateText } from "../../newtree/text.js";
+      window.newtreeText = { cycleText, updateText };
+    </script>
+  </body>
+</html>

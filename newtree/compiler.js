@@ -23,9 +23,10 @@ function compile(source, {
   assetExists,
   envIs
 } = {}) {
-  const file = { filename, resolve, stateNames, assetExists, envIs, components: new Map(), usesClass: false };
+  const file = { filename, resolve, stateNames, assetExists, envIs, components: new Map(), features: new Set(), usesClass: false };
   const body = gen(parse(blade(source)), [], file, true);
   const imports = [...file.components].map(([name, spec]) => `import ${name} from ${JSON.stringify(spec)}`);
+  if (file.features.has("text")) imports.unshift(`import { cycleText } from ${JSON.stringify(runtime.replace(/runtime\.js$/, "text.js"))}`);
   return [
     `import { view } from ${JSON.stringify(runtime)}`,
     ...imports,
@@ -248,7 +249,8 @@ function emitElement(el, ctx) {
     } else if (a.name === "svg") {
       binds.push({ k: "svg", f: fn(attrExpr(a.value, ctx), ctx) });
     } else if (a.name === "cycle") {
-      binds.push({ k: "cycle", f: fn(attrExpr(a.value, ctx), ctx) });
+      ctx.file.features.add("text");
+      binds.push({ k: "use", u: "cycleText", f: fn(attrExpr(a.value, ctx), ctx) });
     } else if (a.name === "cycle-delay") {
       cycleDelay = fn(attrExpr(a.value, ctx), ctx);
     } else if (a.name === "lazy") {
@@ -261,7 +263,7 @@ function emitElement(el, ctx) {
   }
   for (const bind of binds) {
     if (bind.k === "svg" && svgFallback) bind.g = svgFallback;
-    if (bind.k === "cycle" && cycleDelay) bind.d = cycleDelay;
+    if (bind.u === "cycleText" && cycleDelay) bind.d = cycleDelay;
   }
   let marker = "";
   if (binds.length) {
@@ -270,7 +272,8 @@ function emitElement(el, ctx) {
     for (const b of binds) {
       const fallback = b.g ? `, g: ${b.g}` : "";
       const delay = b.d ? `, d: ${b.d}` : "";
-      ctx.parts.push(`{ k: '${b.k}', e: ${e}, n: ${JSON.stringify(b.n)}, f: ${b.f}${fallback}${delay} }`);
+      const updater = b.u ? `, u: ${b.u}` : "";
+      ctx.parts.push(`{ k: '${b.k}', e: ${e}, n: ${JSON.stringify(b.n)}, f: ${b.f}${fallback}${delay}${updater} }`);
     }
   }
   ctx.html += `<${el.tag}${attrs}${marker}>`;

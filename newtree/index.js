@@ -5,6 +5,7 @@ import { start as startRouter, navigate, fail } from "./router.js";
 import { onRoute, onScroll, onResize } from "./lifecycle.js";
 import { reactive, effect } from "./reactive.js";
 import { effect as effect2 } from "./reactive.js";
+import { updateText } from "./text.js";
 let initialization = null;
 
 function initialize() {
@@ -38,5 +39,6 @@ export {
   reactive,
   start,
   states,
+  updateText,
   effect2 as watch
 };

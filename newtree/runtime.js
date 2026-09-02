@@ -97,66 +97,11 @@ function view(def) {
                 });
             }),
           );
-        } else if (p.k === "cycle") {
-          let timer = null;
-          let exitTimer = null;
-          let onVisibility = null;
-          const pause = () => {
-            if (timer) clearInterval(timer);
-            if (exitTimer) clearTimeout(exitTimer);
-            timer = null;
-            exitTimer = null;
-          };
-          const stop = () => {
-            pause();
-            if (onVisibility)
-              document.removeEventListener("visibilitychange", onVisibility);
-            onVisibility = null;
-          };
-          effects.push(
-            effect(() => {
-              stop();
-              const words = String(call(p.f) ?? "")
-                .split("|")
-                .map((word) => word.trim())
-                .filter(Boolean);
-              const delay = Math.max(0, Number(p.d ? call(p.d) : 2200) || 2200);
-              if (!words.length) {
-                el.replaceChildren();
-                return;
-              }
-              let index = 0;
-              el.replaceChildren(cyclingWord(words[index], "is-in"));
-              if (
-                words.length < 2 ||
-                matchMedia("(prefers-reduced-motion: reduce)").matches
-              )
-                return;
-              const advance = () => {
-                if (!el.isConnected) {
-                  stop();
-                  return;
-                }
-                el.querySelectorAll(".cycling-text-item.is-out").forEach(
-                  (word) => word.remove(),
-                );
-                const leaving = el.querySelector(".cycling-text-item.is-in");
-                leaving?.classList.replace("is-in", "is-out");
-                index = (index + 1) % words.length;
-                el.append(cyclingWord(words[index], "is-in"));
-                exitTimer = setTimeout(() => leaving?.remove(), 300);
-              };
-              const resume = () => {
-                pause();
-                if (!document.hidden && el.isConnected)
-                  timer = setInterval(advance, delay);
-              };
-              onVisibility = resume;
-              document.addEventListener("visibilitychange", onVisibility);
-              resume();
-            }),
-          );
-          children.push({ destroy: stop });
+        } else if (p.k === "use") {
+          const instance = p.u(el);
+          effects.push(effect(() => instance.update(call(p.f), p.d ? call(p.d) : undefined)));
+          queueMicrotask(() => instance.connect?.());
+          children.push(instance);
         } else if (p.k === "lazy") {
           let observer = null;
           let cancelled = false;
@@ -286,24 +231,6 @@ function view(def) {
       };
     },
   };
-}
-function cyclingWord(value, state) {
-  const phrase = document.createElement("span");
-  phrase.className = `cycling-text-item ${state}`;
-
-  value
-    .split(/\s+/)
-    .filter(Boolean)
-    .forEach((value, index) => {
-      if (index) phrase.append(document.createTextNode(" "));
-      const word = document.createElement("span");
-      word.className = "cycling-text-word";
-      word.style.setProperty("--cycling-word-index", String(index));
-      word.textContent = value;
-      phrase.append(word);
-    });
-
-  return phrase;
 }
 function mount(child, scope, params, inherited, anchor) {
   const inst = child.create(scope, params, { ...inherited });
