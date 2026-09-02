@@ -1,7 +1,7 @@
 import routeModules from "virtual:core/routes";
 import { registerStates, states, defineState } from "./states.js";
 import { registerBehaviors } from "./behaviors.js";
-import { start as startRouter, navigate, fail } from "./router.js";
+import { start as startRouter, navigate, fail, mountRoute, dismissRoute } from "./router.js";
 import { onRoute, onScroll, onResize } from "./lifecycle.js";
 import { reactive, effect } from "./reactive.js";
 import { effect as effect2 } from "./reactive.js";
@@ -30,8 +30,10 @@ async function start(target = "#app") {
 }
 export {
   defineState,
+  dismissRoute,
   effect,
   fail,
+  mountRoute,
   navigate,
   onRoute,
   onResize,

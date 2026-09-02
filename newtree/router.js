@@ -7,6 +7,26 @@ let outlet = null;
 let current = null;
 let token = 0;
 let onErrorPage = false;
+const mountedRoutes = [];
+let currentRoute = null;
+let currentMounted = false;
+
+function mountRoute(pattern, view) {
+  if (!pattern.startsWith("/") || !view.startsWith("/")) throw new Error("[core] mounted routes require absolute paths");
+  const keys = [];
+  const source = pattern.split("/").filter(Boolean).map((part) => {
+    if (part.startsWith(":")) {
+      keys.push(part.slice(1));
+      return "([^/]+)";
+    }
+    if (part === "*") {
+      keys.push("wildcard");
+      return "(.*)";
+    }
+    return part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }).join("/");
+  mountedRoutes.push({ re: new RegExp(`^/${source}/?$`), keys, view });
+}
 function start(el, manifest) {
   root = el;
   routes = manifest.routes;
@@ -25,8 +45,25 @@ function navigate(to, { replace = false } = {}) {
   const url = new URL(to, location.href);
   const here = url.pathname + url.search === location.pathname + location.search;
   if (here && !onErrorPage) return Promise.resolve();
-  if (!here) history[replace ? "replaceState" : "pushState"]({}, "", url);
+  if (!here) {
+    const mounted = mountedRoutes.find((route) => route.re.test(url.pathname));
+    const fromBase = mounted && routes.some((route) => route.path === mounted.view && route.re.test(location.pathname));
+    const state = fromBase && !replace
+      ? { __newtreeMountedFrom: mounted.view }
+      : replace && history.state?.__newtreeMountedFrom
+        ? { __newtreeMountedFrom: history.state.__newtreeMountedFrom }
+        : {};
+    history[replace ? "replaceState" : "pushState"](state, "", url);
+  }
   return render();
+}
+function dismissRoute(to) {
+  const url = new URL(to, location.href);
+  if (history.state?.__newtreeMountedFrom === url.pathname) {
+    history.back();
+    return;
+  }
+  return navigate(url.pathname + url.search + url.hash, { replace: true });
 }
 function fail(status = 500, message = "", details = null) {
   return showError(++token, status, message, details);
@@ -43,14 +80,25 @@ function useShell(v) {
 async function render() {
   const mine = ++token;
   const path = location.pathname;
-  const hit = routes.find((r) => r.re.test(path));
+  const exact = routes.find((r) => r.re.test(path));
+  const mounted = exact ? null : mountedRoutes.find((route) => route.re.test(path));
+  const base = mounted ? routes.find((route) => route.path === mounted.view) : null;
+  const hit = exact ? { route: exact, keys: exact.keys, re: exact.re, mounted: false } : base ? { route: base, keys: mounted.keys, re: mounted.re, mounted: true } : null;
   states.route.path = path;
   states.route.params = hit ? params(hit, path) : {};
   if (!hit) return showError(mine, 404, `No view for ${path}`);
   try {
-    const mod = await hit.load();
+    if (current && currentRoute === hit.route && (currentMounted || hit.mounted)) {
+      currentMounted = hit.mounted;
+      onErrorPage = false;
+      emitRoute({ path, params: states.route.params, root, outlet });
+      return;
+    }
+    const mod = await hit.route.load();
     if (mine !== token) return;
     swap(mod.default.create({}, states.route.params));
+    currentRoute = hit.route;
+    currentMounted = hit.mounted;
     onErrorPage = false;
     emitRoute({ path, params: states.route.params, root, outlet });
     scrollTo(0, 0);
@@ -122,7 +170,9 @@ function params(route, path) {
   return Object.fromEntries(route.keys.map((key, i) => [key, decodeURIComponent(match[i + 1] ?? "")]));
 }
 export {
+  dismissRoute,
   fail,
+  mountRoute,
   navigate,
   start
 };

@@ -80,7 +80,7 @@ function core(options = {}) {
       }
       return part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     }).join("/");
-    return { keys, source: `^/${source}/?$`, score: route.split("/").filter(Boolean).reduce((n, part) => n + (part.startsWith("[") ? 1 : 2), 0) };
+    return { route, keys, source: `^/${source}/?$`, score: route.split("/").filter(Boolean).reduce((n, part) => n + (part.startsWith("[") ? 1 : 2), 0) };
   }
   function scan() {
     const found = new Map();
@@ -154,7 +154,7 @@ function core(options = {}) {
         const shell = files.find((file) => path.basename(file, viewExt) === "_shell");
         const routes = files.filter((file) => !isError(file) && path.basename(file, viewExt) !== "_shell").map((file) => {
           const meta = routeMeta(file);
-          return `{ load: () => import(${JSON.stringify(viewPath(file))}), re: new RegExp(${JSON.stringify(meta.source)}), keys: ${JSON.stringify(meta.keys)}, score: ${meta.score} }`;
+          return `{ path: ${JSON.stringify(meta.route)}, load: () => import(${JSON.stringify(viewPath(file))}), re: new RegExp(${JSON.stringify(meta.source)}), keys: ${JSON.stringify(meta.keys)}, score: ${meta.score} }`;
         });
         const errors = files.filter(isError).map((file) => {
           const name = path.basename(file, viewExt);

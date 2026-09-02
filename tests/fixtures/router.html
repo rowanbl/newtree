@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<body>
+  <main id="app"></main>
+  <script type="module">
+    import { dismissRoute, mountRoute, navigate, start } from '/newtree/router.js'
+    import { states } from '/newtree/states.js'
+
+    let creates = 0
+    const view = {
+      create() {
+        creates += 1
+        const node = document.createElement('section')
+        node.dataset.view = 'models'
+        return { nodes: [node], destroy() { node.remove() } }
+      }
+    }
+    const manifest = {
+      routes: [{ path: '/resources/models', re: /^\/resources\/models\/?$/, keys: [], load: async () => ({ default: view }) }],
+      errors: {},
+      shell: null
+    }
+
+    mountRoute('/resources/models/:model', '/resources/models')
+    history.replaceState({}, '', '/resources/models/paper-observatory')
+    await start(document.querySelector('#app'), manifest)
+    window.routerFixture = { dismissRoute, navigate, states, creates: () => creates }
+  </script>
+</body>
+</html>
