@@ -224,11 +224,23 @@ function core(options = {}) {
         map: null
       };
     },
-    handleHotUpdate(ctx) {
-      if (!compiled(ctx.file)) return;
-      index = null;
-      ctx.server.ws.send({ type: "full-reload" });
-      return [];
+    hotUpdate(ctx) {
+      if (this.environment.name !== "client") return;
+
+      if (compiled(ctx.file)) {
+        index = null;
+        this.environment.hot.send({ type: "full-reload", path: "*" });
+        return [];
+      }
+
+      // Vite cannot add a missing CSS import to the module graph. If the file is
+      // created after its @import was added, invalidate the failed transform and
+      // retry it in the browser without requiring a dev-server restart.
+      if (ctx.type === "create" && ctx.file.endsWith(".css")) {
+        this.environment.moduleGraph.invalidateAll();
+        this.environment.hot.send({ type: "full-reload", path: "*" });
+        return [];
+      }
     }
   };
 }
