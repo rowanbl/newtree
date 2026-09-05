@@ -155,6 +155,11 @@ function view(def) {
             {
               states: opts.contentStates ?? states,
               props: opts.contentProps,
+              content: opts.parentContent,
+              contentScope: opts.parentContentScope,
+              contentParams: opts.parentContentParams,
+              contentProps: opts.parentContentProps,
+              contentStates: opts.parentContentStates,
             },
           );
           textAt[i].before(...inst.nodes);
@@ -168,6 +173,11 @@ function view(def) {
         contentScope: opts.contentScope,
         contentParams: opts.contentParams,
         contentProps: opts.contentProps,
+        parentContent: opts.parentContent,
+        parentContentScope: opts.parentContentScope,
+        parentContentParams: opts.parentContentParams,
+        parentContentProps: opts.parentContentProps,
+        parentContentStates: opts.parentContentStates,
       };
       def.blocks.forEach((b, i) => {
         const anchor = blockAt[i];
@@ -177,7 +187,7 @@ function view(def) {
         }
         if (b.k === "comp") {
           children.push(
-            component(b, anchor, scope, params, props, effects, states),
+            component(b, anchor, scope, params, props, effects, states, inherited),
           );
           return;
         }
@@ -261,7 +271,7 @@ function svgFile(b, anchor, scope, params, props, states) {
     },
   };
 }
-function component(b, anchor, scope, params, props, effects, states) {
+function component(b, anchor, scope, params, props, effects, states, inherited) {
   const child = typeof b.v === "function" ? b.v() : b.v;
   const call = (f, event) => f(states, scope, event, params, props);
   const own = {};
@@ -277,6 +287,11 @@ function component(b, anchor, scope, params, props, effects, states) {
     contentParams: params,
     contentProps: props,
     contentStates: states,
+    parentContent: inherited.parentContent ?? inherited.content,
+    parentContentScope: inherited.parentContentScope ?? inherited.contentScope,
+    parentContentParams: inherited.parentContentParams ?? inherited.contentParams,
+    parentContentProps: inherited.parentContentProps ?? inherited.contentProps,
+    parentContentStates: inherited.parentContentStates ?? inherited.states,
     slots,
   });
   anchor.before(...inst.nodes);

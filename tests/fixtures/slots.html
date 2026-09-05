@@ -1,0 +1,11 @@
+<!doctype html>
+<html>
+<body>
+  <main id="app"></main>
+  <script type="module">
+    import page from '/tests/fixtures/SlotPage.comp'
+    const instance = page.create({}, {})
+    document.querySelector('#app').append(...instance.nodes)
+  </script>
+</body>
+</html>
