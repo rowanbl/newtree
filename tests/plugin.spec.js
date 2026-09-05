@@ -57,3 +57,13 @@ test('reloads when a Newtree source file is created', () => {
   expect(result).toEqual([])
   expect(hot.messages).toEqual([{ type: 'full-reload', path: '*' }])
 })
+
+test('keeps named route lifecycle configuration in the generated state registry', () => {
+  const plugin = core({ states: 'tests/fixtures' })
+  plugin.configResolved({ root: process.cwd(), mode: 'test', command: 'build' })
+
+  const source = plugin.load('\0virtual:core/states')
+
+  expect(source).toContain('import { state as stateConfig0 } from "/tests/fixtures/route-state.js"')
+  expect(source).toContain('state: stateConfig0')
+})

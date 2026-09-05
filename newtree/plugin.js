@@ -45,6 +45,11 @@ function core(options = {}) {
     stateIndex = scanStates();
     return stateIndex;
   }
+  function stateConfigs() {
+    const dir = path.resolve(root, states);
+    if (!fs.existsSync(dir)) return [];
+    return fs.readdirSync(dir).filter((file) => file.endsWith(".js") && /\bexport\s+const\s+state\b|\bexport\s*\{[^}]*\bstate\b[^}]*\}/s.test(fs.readFileSync(path.join(dir, file), "utf8")));
+  }
   function assetExists(id) {
     const slash = id.indexOf("/");
     const group = assets[id.slice(0, slash)];
@@ -163,8 +168,12 @@ function core(options = {}) {
         return `export default { routes: [${routes.join(",")}], errors: {${errors.join(",")}}, shell: ${shell ? `() => import(${JSON.stringify(viewPath(shell))})` : "null"} }`;
       }
       if (id === "\0" + STATES) {
+        const configured = stateConfigs();
+        const sourceRoot = `/${states.replace(/^\/+|\/+$/g, "")}/`;
         return [
+          ...configured.map((file, index) => `import { state as stateConfig${index} } from ${JSON.stringify(sourceRoot + file)}`),
           `const mods = import.meta.glob(${JSON.stringify(`/${states}/*.js`)}, { eager: true })`,
+          ...configured.map((file, index) => `mods[${JSON.stringify(sourceRoot + file)}] = { ...mods[${JSON.stringify(sourceRoot + file)}], state: stateConfig${index} }`),
           `export default mods`
         ].join("\n");
       }
