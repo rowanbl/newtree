@@ -4,7 +4,8 @@
   <main id="app"></main>
   <script type="module">
     import { dismissRoute, mountRoute, navigate, start } from '/newtree/router.js'
-    import { states } from '/newtree/states.js'
+    import { registerStates, states } from '/newtree/states.js'
+    import * as routeState from '/tests/fixtures/route-state.js'
 
     let creates = 0
     const view = {
@@ -16,12 +17,18 @@
       }
     }
     const manifest = {
-      routes: [{ path: '/resources/models', re: /^\/resources\/models\/?$/, keys: [], load: async () => ({ default: view }) }],
+      routes: [
+        { path: '/resources/models', re: /^\/resources\/models\/?$/, keys: [], load: async () => ({ default: view }) },
+        { path: '/workspace', re: /^\/workspace\/?$/, keys: [], load: async () => ({ default: view }) },
+        { path: '/elsewhere', re: /^\/elsewhere\/?$/, keys: [], load: async () => ({ default: view }) },
+      ],
       errors: {},
       shell: null
     }
 
     mountRoute('/resources/models/:model', '/resources/models')
+    mountRoute('/workspace/:item', '/workspace')
+    registerStates({ '/tests/fixtures/route-state.js': routeState })
     history.replaceState({}, '', '/resources/models/paper-observatory')
     await start(document.querySelector('#app'), manifest)
     window.routerFixture = { dismissRoute, navigate, states, creates: () => creates }

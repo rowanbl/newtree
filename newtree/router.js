@@ -1,4 +1,4 @@
-import { states } from "./states.js";
+import { routeStates, states } from "./states.js";
 import { emitRoute } from "./lifecycle.js";
 let root = null;
 let routes = [];
@@ -80,12 +80,14 @@ function useShell(v) {
 async function render() {
   const mine = ++token;
   const path = location.pathname;
+  const previousPath = states.route.path;
   const exact = routes.find((r) => r.re.test(path));
   const mounted = exact ? null : mountedRoutes.find((route) => route.re.test(path));
   const base = mounted ? routes.find((route) => route.path === mounted.view) : null;
   const hit = exact ? { route: exact, keys: exact.keys, re: exact.re, mounted: false } : base ? { route: base, keys: mounted.keys, re: mounted.re, mounted: true } : null;
   states.route.path = path;
   states.route.params = hit ? params(hit, path) : {};
+  routeStates(previousPath, path);
   if (!hit) return showError(mine, 404, `No view for ${path}`);
   try {
     if (current && currentRoute === hit.route && (currentMounted || hit.mounted)) {

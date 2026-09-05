@@ -35,3 +35,27 @@ test('dismissing an in-page mounted route returns through browser history', asyn
   await expect.poll(() => page.evaluate(() => location.pathname)).toBe('/resources/models')
   expect(await page.evaluate(() => window.routerFixture.creates())).toBe(1)
 })
+
+test('configured global state resets on route entry and departure without losing its proxy', async ({ page }) => {
+  await page.goto('/tests/fixtures/router.html')
+  await page.waitForFunction(() => window.routerFixture)
+
+  const result = await page.evaluate(async () => {
+    const state = window.routerFixture.states['route-state']
+    state.value = 'draft outside'
+    await window.routerFixture.navigate('/workspace')
+    const entered = { value: state.value, generation: state.generation, same: state === window.routerFixture.states['route-state'] }
+    state.value = 'draft inside'
+    await window.routerFixture.navigate('/workspace/part-one')
+    const mounted = { value: state.value, generation: state.generation }
+    await window.routerFixture.navigate('/elsewhere')
+    const left = { value: state.value, generation: state.generation, same: state === window.routerFixture.states['route-state'] }
+    return { entered, mounted, left }
+  })
+
+  expect(result).toEqual({
+    entered: { value: 'clean', generation: 2, same: true },
+    mounted: { value: 'draft inside', generation: 2 },
+    left: { value: 'clean', generation: 3, same: true },
+  })
+})
