@@ -173,11 +173,6 @@ function view(def) {
         contentScope: opts.contentScope,
         contentParams: opts.contentParams,
         contentProps: opts.contentProps,
-        parentContent: opts.parentContent,
-        parentContentScope: opts.parentContentScope,
-        parentContentParams: opts.parentContentParams,
-        parentContentProps: opts.parentContentProps,
-        parentContentStates: opts.parentContentStates,
       };
       def.blocks.forEach((b, i) => {
         const anchor = blockAt[i];
@@ -287,11 +282,11 @@ function component(b, anchor, scope, params, props, effects, states, inherited) 
     contentParams: params,
     contentProps: props,
     contentStates: states,
-    parentContent: inherited.parentContent ?? inherited.content,
-    parentContentScope: inherited.parentContentScope ?? inherited.contentScope,
-    parentContentParams: inherited.parentContentParams ?? inherited.contentParams,
-    parentContentProps: inherited.parentContentProps ?? inherited.contentProps,
-    parentContentStates: inherited.parentContentStates ?? inherited.states,
+    parentContent: inherited.content,
+    parentContentScope: inherited.contentScope,
+    parentContentParams: inherited.contentParams,
+    parentContentProps: inherited.contentProps,
+    parentContentStates: inherited.states,
     slots,
   });
   anchor.before(...inst.nodes);

@@ -1,1 +1,1 @@
-<div><SlotInner>{:content}</SlotInner></div>
+<div><SlotLeaf>{:content}</SlotLeaf></div>
